@@ -43,6 +43,14 @@ class EmbeddingService:
     async def aclose(cls) -> None:
         return None
 
+    async def available(self) -> bool:
+        """False when no embedding model can be resolved (keyword-only mode)."""
+        try:
+            await self._target()
+            return True
+        except RuntimeError:
+            return False
+
     async def _target(self) -> str:
         if self.model is None:
             from src.providers.router import resolve

@@ -76,6 +76,19 @@ class QdrantStore:
         self.client = get_qdrant_client()
         self._ready = False
         self._lock = asyncio.Lock()
+        self._base_collection = self.collection
+        self.keyword_only = False
+
+    def set_keyword_only(self, on: bool) -> None:
+        """Keyword-only mode: no embedding model is available (e.g. local compute off and
+        no hosted embedding key). Chunks go to a sparse-only BM25 collection "<name>_kw",
+        so a keyword index never mixes with a dense one."""
+        if on == self.keyword_only:
+            return
+        self.keyword_only = on
+        self.collection = f"{self._base_collection}_kw" if on else self._base_collection
+        self._ready = False
+        logger.info("Retrieval mode", keyword_only=on, collection=self.collection)
 
     # ── Collection management ───────────────────────────────────────────
 
@@ -88,6 +101,16 @@ class QdrantStore:
             if vector_size:
                 self.vector_size = vector_size
             exists = await self.client.collection_exists(self.collection)
+            if self.keyword_only:
+                if not exists:
+                    await self.client.create_collection(
+                        collection_name=self.collection, vectors_config={},
+                        sparse_vectors_config={SPARSE: models.SparseVectorParams(modifier=models.Modifier.IDF)},
+                    )
+                    logger.info("Created keyword-only collection", collection=self.collection)
+                    await self._create_payload_indexes()
+                self._ready = True
+                return
             if not exists:
                 sparse_cfg = (
                     {SPARSE: models.SparseVectorParams(modifier=models.Modifier.IDF)}
@@ -162,18 +185,20 @@ class QdrantStore:
     async def upsert(
         self,
         payloads: Sequence[Dict[str, Any]],
-        dense_vectors: Sequence[Sequence[float]],
+        dense_vectors: Optional[Sequence[Sequence[float]]],
         sparse_vectors: Optional[Sequence[SparseVectorData]] = None,
         ids: Optional[Sequence[str]] = None,
     ) -> List[str]:
         if not payloads:
             return []
-        await self.ensure_collection(vector_size=len(dense_vectors[0]))
+        self.set_keyword_only(dense_vectors is None)
+        await self.ensure_collection(vector_size=None if dense_vectors is None else len(dense_vectors[0]))
         ids = list(ids) if ids else [str(uuid4()) for _ in payloads]
         points = []
-        for i, (pid, payload, dense) in enumerate(zip(ids, payloads, dense_vectors)):
-            vector: Dict[str, Any] = {DENSE: list(dense)}
-            if self.sparse_enabled and sparse_vectors is not None:
+        dense_iter = dense_vectors if dense_vectors is not None else [None] * len(payloads)
+        for i, (pid, payload, dense) in enumerate(zip(ids, payloads, dense_iter)):
+            vector: Dict[str, Any] = {} if dense is None else {DENSE: list(dense)}
+            if (self.sparse_enabled or self.keyword_only) and sparse_vectors is not None:
                 sv = sparse_vectors[i]
                 if not sv.is_empty():
                     vector[SPARSE] = models.SparseVector(indices=sv.indices, values=sv.values)
@@ -226,20 +251,30 @@ class QdrantStore:
 
     async def hybrid_search(
         self,
-        dense_query: Sequence[float],
+        dense_query: Optional[Sequence[float]],
         sparse_query: Optional[SparseVectorData],
         top_k: int = 10,
         prefetch_k: Optional[int] = None,
         filters: Optional[RetrievalFilters] = None,
     ) -> List[RetrievedChunk]:
-        """Dense + sparse prefetch fused by RRF (falls back to dense-only)."""
+        """Dense + sparse prefetch fused by RRF (falls back to dense-only, or BM25-only
+        when ``dense_query`` is None)."""
+        self.set_keyword_only(dense_query is None)
         await self.ensure_collection()
         prefetch_k = prefetch_k or max(top_k * 3, 20)
         qfilter = self.build_filter(filters)
         started = time.perf_counter()
 
         use_sparse = self.sparse_enabled and sparse_query is not None and not sparse_query.is_empty()
-        if use_sparse:
+        if dense_query is None:
+            if sparse_query is None or sparse_query.is_empty():
+                return []
+            response = await self.client.query_points(
+                collection_name=self.collection,
+                query=models.SparseVector(indices=sparse_query.indices, values=sparse_query.values),
+                using=SPARSE, limit=top_k, query_filter=qfilter, with_payload=True,
+            )
+        elif use_sparse:
             prefetch = [
                 models.Prefetch(query=list(dense_query), using=DENSE, limit=prefetch_k, filter=qfilter),
                 models.Prefetch(

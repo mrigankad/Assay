@@ -102,10 +102,13 @@ class IngestionPipeline:
 
     async def _index_chunks(self, chunks: List[Chunk], job: IngestionJob) -> None:
         batch = settings.embedding_batch_size
+        has_dense = await self.embedding.available() if hasattr(self.embedding, "available") else True
+        if not has_dense:
+            logger.warning("No embedding model available; indexing keyword-only (BM25)")
         for start in range(0, len(chunks), batch):
             part = chunks[start:start + batch]
             texts = [c.content for c in part]
-            dense = await self.embedding.embed_texts(texts, input_type="passage")
+            dense = await self.embedding.embed_texts(texts, input_type="passage") if has_dense else None
             sparse = self.sparse.encode_documents(texts)
             payloads = []
             for c in part:

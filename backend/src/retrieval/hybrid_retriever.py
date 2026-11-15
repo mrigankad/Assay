@@ -61,8 +61,9 @@ class HybridRetriever:
             return None
 
     async def _search_one(self, query: str, top_k: int, filters: Optional[RetrievalFilters]) -> List[RetrievedChunk]:
-        dense = await self.embedding.embed_query(query)
-        sparse = self.sparse.encode_query(query) if settings.hybrid_search_enabled else None
+        has_dense = await self.embedding.available() if hasattr(self.embedding, "available") else True
+        dense = await self.embedding.embed_query(query) if has_dense else None
+        sparse = self.sparse.encode_query(query) if (settings.hybrid_search_enabled or not has_dense) else None
         chunks = await self.store.hybrid_search(dense, sparse, top_k=top_k, filters=filters)
         for c in chunks:
             c.metadata["matched_query"] = query
