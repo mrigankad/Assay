@@ -41,7 +41,10 @@ export function SetupPage() {
 
     useEffect(() => {
         providerService.detected(true).then((d) => {
-            const usable = d.filter((p) => p.enabled && p.caps.includes('chat') && defaultModel(p));
+            // Same order the router prefers: hosted keys, then enabled vendor CLIs, then Ollama.
+            const rank = (p: DetectedProvider) => (p.kind === 'cli' ? 1 : p.id === 'ollama' ? 2 : p.kind === 'local' ? 3 : 0);
+            const usable = d.filter((p) => p.enabled && p.caps.includes('chat') && defaultModel(p))
+                .sort((a, b) => rank(a) - rank(b));
             setFound(usable);
             setChoice(usable[0]?.id ?? null);
         }).catch(() => setFound([]));

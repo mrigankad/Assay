@@ -29,6 +29,9 @@ export const useAuthStore = create<AuthState>()(
             },
 
             logout: () => {
+                // Conversations belong to the signed-in user: never leave them for the next person on this browser.
+                try { localStorage.removeItem('rag-chat-history'); } catch { /* storage blocked */ }
+                import('@/stores/chatStore').then((m) => m.useChatStore.getState().clearMessages()).catch(() => undefined);
                 set({
                     token: null,
                     user: null,
