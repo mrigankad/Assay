@@ -39,43 +39,59 @@ def _context_by_number(context: str) -> Dict[int, str]:
     return out
 
 
-def _sentences(text: str) -> List[str]:
+def _sentences(text: str) -> List[tuple]:
+    """(sentence, paragraph index). A citation after the stop, even on the next line, joins its sentence."""
     text = re.sub(r"^\s*[-*•]\s+", "", text, flags=re.M)        # list bullets
     text = re.sub(r"[*_#`]", "", text)                           # markdown emphasis
-    text = re.sub(r"([.!?])((?:\s*\[\d{1,3}\])+)", r"\2\1", text)   # "...5%. [6]" -> "...5% [6]." (marker after the stop)
-    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(\[])|\n+", text)
-    return [p.strip() for p in parts if len(p.strip()) > 12]
+    text = re.sub(r"([.!?])((?:\s*\[\d{1,3}\])+)",
+                  lambda m: " " + " ".join(re.findall(r"\[\d{1,3}\]", m.group(2))) + m.group(1),
+                  text)                                          # "...5%.\n [6]" -> "...5% [6]."
+    out = []
+    for k, para in enumerate(re.split(r"\n+", text)):
+        for p in re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(\[])", para):
+            if len(p.strip()) > 12:
+                out.append((p.strip(), k))
+    return out
 
 
 def _numbers(s: str) -> List[str]:
     return [n.replace(",", "") for n in _NUM.findall(s)]
 
 
+def _judge(body: str, markers: List[int], sources: Dict[int, str]) -> dict:
+    cited = " ".join(sources[m] for m in markers)
+    cited_nums = set(_numbers(cited))
+    missing = [n for n in _numbers(body) if n not in cited_nums]
+    words = {w for w in _WORD.findall(body.lower()) if w not in _STOP}
+    found = sum(1 for w in words if w in cited or (len(w) >= 5 and w[:4] in cited))
+    overlap = found / len(words) if words else 1.0
+    if missing or overlap < 0.25:
+        status = "unsupported"
+    elif overlap >= 0.55:
+        status = "supported"
+    else:
+        status = "partial"
+    return {"text": body, "markers": markers, "status": status, "missing": missing, "overlap": round(overlap, 2)}
+
+
 def check_claims(text: str, evidence: List[Evidence], context: str = "") -> List[dict]:
     full = _context_by_number(context)
     sources = {i + 1: (full.get(i + 1) or ev.snippet).lower() for i, ev in enumerate(evidence)}
-    claims: List[dict] = []
-    for sent in _sentences(text):
+    parsed = []
+    for sent, para in _sentences(text):
         markers = sorted({int(n) for n in _CITE.findall(sent) if int(n) in sources})
         body = re.sub(r"\s+([.,;:!?])", r"\1", _CITE.sub("", sent)).strip()
         body = re.sub(r"^[A-Z][\w ]{0,30}:\s+", "", body)          # "Trigger: ..." list labels are not claims
-        nums = [n for n in _numbers(body) if len(n) > 0]
+        parsed.append((body, markers, para))
+    claims: List[dict] = []
+    for i, (body, markers, para) in enumerate(parsed):
         if not markers:
-            if nums:
+            # One citation often covers the sentences before it in the same paragraph: borrow it.
+            borrowed = next((m for b, m, p in parsed[i + 1:] if p == para and m), None)
+            if borrowed:
+                claims.append(_judge(body, borrowed, sources))
+            elif _numbers(body):
                 claims.append({"text": body, "markers": [], "status": "uncited", "missing": []})
             continue
-        cited = " ".join(sources[m] for m in markers)
-        cited_nums = set(_numbers(cited))
-        missing = [n for n in nums if n not in cited_nums]
-        words = {w for w in _WORD.findall(body.lower()) if w not in _STOP}
-        found = sum(1 for w in words if w in cited or (len(w) >= 5 and w[:4] in cited))
-        overlap = found / len(words) if words else 1.0
-        if missing or overlap < 0.25:
-            status = "unsupported"
-        elif overlap >= 0.55:
-            status = "supported"
-        else:
-            status = "partial"
-        claims.append({"text": body, "markers": markers, "status": status, "missing": missing,
-                       "overlap": round(overlap, 2)})
+        claims.append(_judge(body, markers, sources))
     return claims[:60]

@@ -145,7 +145,7 @@ function Claims({ claims, onCite }: { claims: Claim[]; onCite: (n: number) => vo
                             <li key={i} className="flex gap-3 border-t border-rule py-2.5 text-[13px] leading-5">
                                 <span className={clsx('mt-[7px] h-2 w-2 shrink-0 rounded-full', st.dot)} title={st.label} />
                                 <div className="flex min-w-0 flex-col gap-0.5">
-                                    <span className="text-ink">{c.text}</span>
+                                    <span className="text-ink first-letter:uppercase">{c.text}</span>
                                     <span className={clsx('flex flex-wrap items-center gap-x-2 text-xs', st.text)}>
                                         {st.label}{c.missing.length ? `: ${c.missing.join(', ')} not in the source` : ''}
                                         {c.markers.map((n) => (

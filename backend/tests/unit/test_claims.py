@@ -39,3 +39,11 @@ def test_marker_after_full_stop_belongs_to_that_sentence():
     text = "The Contract Price is adjusted by the full movement. [1] Margins recover within two quarters. [2]"
     claims = check_claims(text, EV, CTX)
     assert [c["markers"] for c in claims] == [[1], [2]] and all(c["status"] == "supported" for c in claims)
+
+
+def test_marker_on_next_line_and_shared_marker():
+    text = ("- Trigger: The Contract Price is adjusted by the full movement.\n  [1]\n"
+            "- The Index moved more than 5%. The Q3 adjustment equals 18.0% [1].\n"
+            "Prices rose 12% last year.")
+    assert [(c["status"], c["markers"]) for c in check_claims(text, EV, CTX)] == [
+        ("supported", [1]), ("supported", [1]), ("supported", [1]), ("uncited", [])]
