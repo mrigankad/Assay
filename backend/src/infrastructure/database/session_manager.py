@@ -78,7 +78,9 @@ async def init_db(seed_admin: bool = True) -> None:
         await conn.run_sync(_ensure_columns)
     logger.info("Database tables ready")
 
-    if seed_admin:
+    # No built-in default password: seed an admin only when DEFAULT_ADMIN_PASSWORD is set
+    # (CI, scripted installs). Otherwise the first account created in the UI is the admin.
+    if seed_admin and settings.default_admin_password:
         from src.core.security import hash_password
         async with session_scope() as session:
             existing = await session.scalar(select(User).where(User.username == settings.default_admin_username))

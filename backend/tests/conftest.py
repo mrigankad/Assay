@@ -1,3 +1,8 @@
+import os
+os.environ.setdefault("ALLOW_SIGNUP", "true")  # tests register many users; production default is closed
+os.environ.setdefault("ASSAY_SCAN_LOCAL", "0")
+os.environ.setdefault("DEFAULT_ADMIN_PASSWORD", "admin123")  # test fixture only
+
 import asyncio
 import os
 import shutil

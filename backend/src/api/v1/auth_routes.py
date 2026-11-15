@@ -61,7 +61,8 @@ def _tokens_for(user: User) -> TokenPair:
 
 @router.post("/login", response_model=TokenPair)
 async def login(request: LoginRequest, db: DbSession):
-    user = await db.scalar(select(User).where(User.username == request.username))
+    ident = request.username.strip()
+    user = await db.scalar(select(User).where((User.username == ident) | (User.email == ident.lower())))
     if user is None or not user.is_active or not verify_password(request.password, user.password_hash):
         logger.warning("Failed login attempt", username=request.username)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid username or password")
@@ -69,13 +70,45 @@ async def login(request: LoginRequest, db: DbSession):
     return _tokens_for(user)
 
 
+async def _user_count(db) -> int:
+    from sqlalchemy import func
+    return int(await db.scalar(select(func.count()).select_from(User)) or 0)
+
+
+def _signup_open() -> bool:
+    import os
+    return os.getenv("ALLOW_SIGNUP", "false").lower() in {"1", "true", "yes"}
+
+
+@router.get("/methods")
+async def sign_in_methods(db: DbSession):
+    """What the sign-in page should offer, and whether this is a fresh install."""
+    import os
+    first_run = await _user_count(db) == 0
+    entra = settings.auth_mode in ("entra", "both") and bool(settings.entra_tenant_id and settings.entra_client_id)
+    return {
+        "password": settings.auth_mode in ("local", "both"),
+        "entra": {"enabled": entra, "tenant_id": settings.entra_tenant_id or None,
+                  "client_id": settings.entra_client_id or None} if entra else {"enabled": False},
+        "oidc": {"enabled": bool(os.getenv("OIDC_ISSUER")), "issuer": os.getenv("OIDC_ISSUER") or None,
+                 "client_id": os.getenv("OIDC_CLIENT_ID") or None, "label": os.getenv("OIDC_LABEL", "SSO")},
+        "signup_open": first_run or _signup_open(),
+        "first_run": first_run,
+    }
+
+
 @router.post("/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
 async def register(request: RegisterRequest, db: DbSession):
+    """First account on a fresh install becomes the admin. After that, sign-up is
+    closed unless ALLOW_SIGNUP=true (admins invite people instead)."""
+    first = await _user_count(db) == 0
+    if not first and not _signup_open():
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sign-up is closed. Ask an admin for an invite.")
     exists = await db.scalar(select(User).where((User.username == request.username) | (User.email == request.email)))
     if exists is not None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Username or email already exists")
-    user = User(username=request.username, email=request.email, password_hash=hash_password(request.password),
-                tenant_id=settings.default_tenant_id, role="user", groups="")
+    user = User(username=request.username, email=request.email.lower(), password_hash=hash_password(request.password),
+                tenant_id=settings.default_tenant_id, role="admin" if first else "user", groups="")
     db.add(user)
     await db.flush()
     logger.info("User registered", user_id=str(user.id))

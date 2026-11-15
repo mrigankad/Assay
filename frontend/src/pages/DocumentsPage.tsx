@@ -1,220 +1,138 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import {
-    CloudArrowUpIcon,
-    DocumentIcon,
-    TrashIcon,
-    CheckCircleIcon,
-    ArrowPathIcon,
-    ExclamationCircleIcon,
-    MagnifyingGlassIcon
-} from '@heroicons/react/24/outline';
-import { useDocumentStore } from '@/stores/documentStore';
 import clsx from 'clsx';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useDocumentStore } from '@/stores/documentStore';
+import { Icon } from '@/components/Icon';
+import type { Document } from '@/types';
 
-export function DocumentsPage() {
-    const {
-        documents,
-        isLoading,
-        isUploading,
-        fetchDocuments,
-        uploadDocuments,
-        deleteDocument
-    } = useDocumentStore();
+const ACCEPT = {
+    'application/pdf': ['.pdf'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+    'text/html': ['.html', '.htm'],
+    'text/markdown': ['.md'],
+    'text/csv': ['.csv'],
+    'text/plain': ['.txt'],
+};
 
-    const [searchQuery, setSearchQuery] = useState('');
-
-    useEffect(() => {
-        fetchDocuments();
-    }, []);
-
-    useEffect(() => {
-        // Poll for status every 5 seconds if there are processing documents
-        const interval = setInterval(() => {
-            const hasProcessing = documents.some(doc => doc.status === 'processing');
-            if (hasProcessing) {
-                fetchDocuments();
-            }
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [documents, fetchDocuments]);
-
-    const onDrop = useCallback(async (acceptedFiles: File[]) => {
-        if (acceptedFiles.length === 0) return;
-        await uploadDocuments(acceptedFiles);
-    }, [uploadDocuments]);
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
-        accept: {
-            'application/pdf': ['.pdf'],
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-            'text/plain': ['.txt']
-        },
-        multiple: true
-    });
-
-    const filteredDocuments = documents.filter(doc =>
-        doc.filename.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
+function Status({ doc }: { doc: Document }) {
+    if (doc.status === 'completed') {
+        return <span className="flex items-center gap-1.5 text-[13px] font-semibold text-assay"><Icon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />Indexed</span>;
+    }
+    if (doc.status === 'failed') {
+        return <span className="flex items-center gap-1.5 text-[13px] font-semibold text-dropped"><Icon name="dropped" className="h-3.5 w-3.5" strokeWidth={2} />Failed</span>;
+    }
     return (
-        <div className="h-full flex flex-col p-6 space-y-6 overflow-y-auto bg-dark-950">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Documents</h1>
-                    <p className="text-dark-400 text-sm">Manage your knowledge base</p>
-                </div>
-
-                <div className="relative">
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
-                    <input
-                        type="text"
-                        placeholder="Search documents..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 pr-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white focus:outline-none focus:border-nvidia/50 transition-colors w-full md:w-64"
-                    />
-                </div>
-            </div>
-
-            {/* Upload Area */}
-            <div
-                {...getRootProps()}
-                className={clsx(
-                    "border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer",
-                    isDragActive ? "border-nvidia bg-nvidia/10" : "border-dark-700 hover:border-dark-600 bg-dark-800/50"
-                )}
-            >
-                <input {...getInputProps()} />
-                <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-full bg-dark-700 flex items-center justify-center mb-4">
-                        {isUploading ? (
-                            <ArrowPathIcon className="w-8 h-8 text-nvidia animate-spin" />
-                        ) : (
-                            <CloudArrowUpIcon className="w-8 h-8 text-dark-400 group-hover:text-nvidia transition-colors" />
-                        )}
-                    </div>
-                    <h3 className="text-lg font-semibold text-white">
-                        {isUploading ? 'Uploading documents...' : 'Click or drag files to upload'}
-                    </h3>
-                    <p className="text-dark-500 text-sm mt-1">
-                        Support for PDF, DOCX and TXT files (Max 50MB)
-                    </p>
-                </div>
-            </div>
-
-            {/* Document List */}
-            <div className="bg-dark-900/50 rounded-2xl border border-dark-700 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-dark-700 bg-dark-800/50">
-                                <th className="px-6 py-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">Document</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">Details</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-dark-400 uppercase tracking-wider">Uploaded</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-dark-400 uppercase tracking-wider text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-dark-800">
-                            <AnimatePresence mode="popLayout">
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-12 text-center text-dark-500">
-                                            <ArrowPathIcon className="w-10 h-10 animate-spin mx-auto mb-2 opacity-50" />
-                                            Loading documents...
-                                        </td>
-                                    </tr>
-                                ) : filteredDocuments.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-12 text-center text-dark-500">
-                                            <DocumentIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                                            No documents found
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredDocuments.map((doc) => (
-                                        <motion.tr
-                                            key={doc.id}
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            className="hover:bg-dark-800/30 transition-colors"
-                                        >
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-lg bg-dark-700 flex items-center justify-center">
-                                                        <DocumentIcon className="w-5 h-5 text-dark-400" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-white font-medium truncate max-w-[200px]" title={doc.filename}>
-                                                            {doc.filename}
-                                                        </p>
-                                                        <p className="text-xs text-dark-500">ID: {doc.id ? doc.id.split('-')[0] : 'N/A'}...</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <StatusBadge status={doc.status} />
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-dark-300">
-                                                    {doc.status === 'completed' ? (
-                                                        <>
-                                                            <p>{doc.chunks_count || 0} chunks</p>
-                                                            <p className="text-xs text-dark-500">{doc.total_pages || 0} pages</p>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-dark-500">-</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-dark-400">
-                                                {new Date(doc.uploaded_at).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => deleteDocument(doc.id, doc.filename)}
-                                                    className="p-2 text-dark-500 hover:text-red-500 transition-colors"
-                                                >
-                                                    <TrashIcon className="w-5 h-5" />
-                                                </button>
-                                            </td>
-                                        </motion.tr>
-                                    ))
-                                )}
-                            </AnimatePresence>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <span className="flex flex-col gap-[5px] text-[13px] font-semibold">
+            Reading…
+            <span className="h-1 w-[140px] overflow-hidden rounded-full bg-rule"><span className="block h-1 w-1/2 animate-pulse rounded-full bg-ink" /></span>
+        </span>
     );
 }
 
-function StatusBadge({ status }: { status: string }) {
-    const styles = {
-        completed: "bg-green-500/10 text-green-500 border-green-500/20",
-        processing: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-        failed: "bg-red-500/10 text-red-500 border-red-500/20",
-    };
+const fmt = (n?: number) => (n === undefined || n === null ? '-' : n.toLocaleString());
 
-    const icons = {
-        completed: <CheckCircleIcon className="w-4 h-4" />,
-        processing: <ArrowPathIcon className="w-4 h-4 animate-spin" />,
-        failed: <ExclamationCircleIcon className="w-4 h-4" />,
-    };
+export function DocumentsPage() {
+    const { documents, isLoading, isUploading, fetchDocuments, uploadDocuments, deleteDocument } = useDocumentStore();
+    const [query, setQuery] = useState('');
+    const [confirming, setConfirming] = useState<string | null>(null);
 
-    const currentStyle = styles[status as keyof typeof styles] || styles.failed;
-    const currentIcon = icons[status as keyof typeof icons] || icons.failed;
+    useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
+
+    useEffect(() => {
+        if (!documents.some((d) => d.status === 'processing')) return;
+        const t = setInterval(fetchDocuments, 4000);
+        return () => clearInterval(t);
+    }, [documents, fetchDocuments]);
+
+    const onDrop = useCallback((files: File[]) => { if (files.length) uploadDocuments(files); }, [uploadDocuments]);
+    const { getRootProps, getInputProps, isDragActive, open } = useDropzone({ onDrop, accept: ACCEPT, multiple: true, noClick: true });
+
+    const shown = useMemo(() => documents.filter((d) => d.filename.toLowerCase().includes(query.toLowerCase())), [documents, query]);
+    const totals = useMemo(() => ({
+        docs: documents.length,
+        pages: documents.reduce((a, d) => a + (d.total_pages ?? 0), 0),
+        chunks: documents.reduce((a, d) => a + (d.chunks_count ?? 0), 0),
+    }), [documents]);
 
     return (
-        <div className={clsx("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", currentStyle)}>
-            {currentIcon}
-            <span className="capitalize">{status}</span>
+        <div {...getRootProps()} className="h-full overflow-y-auto bg-paper outline-none">
+            <input {...getInputProps()} />
+            <div className="mx-auto flex max-w-[1180px] flex-col gap-[22px] px-6 py-9 lg:px-12">
+                <header className="flex flex-wrap items-end justify-between gap-4">
+                    <div className="flex flex-col gap-2">
+                        <span className="text-[13px] text-body">Workspace · Documents</span>
+                        <h1 className="font-display text-[34px] font-bold leading-none">Documents</h1>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <label className="flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DBD0] px-3 text-sm">
+                            <Icon name="search" className="h-4 w-4 text-body" />
+                            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter"
+                                className="w-36 bg-transparent outline-none placeholder:text-muted" />
+                        </label>
+                        <button onClick={open} disabled={isUploading}
+                            className="flex h-9 items-center gap-2 rounded-[10px] bg-ink px-3.5 text-sm font-medium text-white disabled:opacity-60">
+                            <Icon name="upload" className="h-4 w-4 text-lime" strokeWidth={2} />
+                            {isUploading ? 'Uploading…' : 'Upload'}
+                        </button>
+                    </div>
+                </header>
+
+                <div className="flex flex-wrap gap-7 border-b border-rule pb-1 text-[13px] text-body">
+                    <span><b className="font-display text-[22px] text-ink">{fmt(totals.docs)}</b>  documents</span>
+                    <span><b className="font-display text-[22px] text-ink">{fmt(totals.pages)}</b>  pages</span>
+                    <span><b className="font-display text-[22px] text-ink">{fmt(totals.chunks)}</b>  chunks</span>
+                </div>
+
+                {documents.length > 0 && (
+                    <div className="flex flex-col text-sm">
+                        <div className="flex items-center border-b border-ink pb-2.5 text-xs font-semibold text-body">
+                            <span className="flex-1">Document</span>
+                            <span className="hidden w-[90px] shrink-0 sm:block">Pages</span>
+                            <span className="hidden w-[90px] shrink-0 sm:block">Chunks</span>
+                            <span className="w-[170px] shrink-0">Status</span>
+                            <span className="w-[120px] shrink-0" />
+                        </div>
+                        {shown.map((d) => (
+                            <div key={d.id} className={clsx('flex items-center border-b border-[#EEF1EA] py-[13px]', d.status === 'processing' && 'bg-[#F7FCE8]')}>
+                                <span className="flex min-w-0 flex-1 items-center gap-2.5 font-medium">
+                                    <Icon name="document" className="h-[18px] w-[18px] shrink-0 text-body" />
+                                    <span className="truncate">{d.filename}</span>
+                                </span>
+                                <span className="hidden w-[90px] shrink-0 text-body sm:block">{fmt(d.total_pages)}</span>
+                                <span className="hidden w-[90px] shrink-0 text-body sm:block">{fmt(d.chunks_count)}</span>
+                                <span className="w-[170px] shrink-0"><Status doc={d} /></span>
+                                <span className="flex w-[120px] shrink-0 justify-end">
+                                    {confirming === d.id ? (
+                                        <span className="flex items-center gap-2 text-[13px]">
+                                            <button onClick={() => { deleteDocument(d.id, d.filename); setConfirming(null); }} className="font-semibold text-dropped">Delete</button>
+                                            <button onClick={() => setConfirming(null)} className="text-body">Keep</button>
+                                        </span>
+                                    ) : (
+                                        <button onClick={() => setConfirming(d.id)} className="text-[13px] text-body hover:text-dropped">Remove</button>
+                                    )}
+                                </span>
+                            </div>
+                        ))}
+                        {!shown.length && <p className="py-6 text-sm text-body">No documents match “{query}”.</p>}
+                    </div>
+                )}
+
+                <button onClick={open}
+                    className={clsx('flex items-center gap-7 rounded-[18px] border-[1.5px] border-dashed px-7 py-5 text-left transition',
+                        isDragActive ? 'border-ink bg-lime-wash' : 'border-[#C9D0C4] bg-bench')}>
+                    <img src="/brand/art/upload.webp" alt="" className="hidden h-[150px] w-[200px] shrink-0 rounded-xl object-cover sm:block" />
+                    <span className="flex flex-col gap-1.5">
+                        <span className="font-display text-[22px] font-bold">
+                            {isDragActive ? 'Drop to add them' : documents.length ? 'Drop files to add more' : isLoading ? 'Loading…' : 'Add your first documents'}
+                        </span>
+                        <span className="text-sm leading-[21px] text-body">
+                            PDF, Word, Excel, PowerPoint, HTML, Markdown, CSV and text. Tables are kept whole and every chunk remembers its page.
+                        </span>
+                    </span>
+                </button>
+            </div>
         </div>
     );
 }

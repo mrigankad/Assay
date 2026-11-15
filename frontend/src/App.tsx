@@ -4,11 +4,13 @@ import { ChatPage } from './pages/ChatPage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { LoginPage } from './pages/LoginPage'
 import { ModelsPage } from './pages/ModelsPage'
+import { SetupPage } from './pages/SetupPage'
 
 function App() {
     return (
         <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/setup" element={<SetupPage />} />
             <Route path="/" element={<Layout />}>
                 <Route index element={<ChatPage />} />
                 <Route path="documents" element={<DocumentsPage />} />

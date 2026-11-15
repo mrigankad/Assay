@@ -11,6 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from src.core.dependency_injection import AdminUser
 from src.providers import PROVIDERS, ROLES
 from src.providers import router as prov
 
@@ -67,3 +68,25 @@ async def test(req: TestRequest):
                 "latency_ms": round((time.perf_counter() - t0) * 1000)}
     except Exception as exc:  # report, don't 500: this is a diagnostics endpoint
         raise HTTPException(status_code=502, detail=f"{type(exc).__name__}: {exc}")
+
+
+class Preferences(BaseModel):
+    default: Optional[str] = None
+    roles: dict[str, str] = {}
+
+
+@router.get("/preferences")
+async def get_preferences():
+    return prov.load_prefs()
+
+
+@router.put("/preferences")
+async def put_preferences(p: Preferences, admin: AdminUser):
+    """Save the model choice from the setup or Models screen. Applies to new questions."""
+    for model in [p.default, *p.roles.values()]:
+        if model and "/" not in model:
+            raise HTTPException(status_code=422, detail=f"'{model}' is not a provider/model string")
+    saved = prov.save_prefs(p.model_dump())
+    from src.services.llm.llm_service import set_llm_service
+    set_llm_service(None)          # next request resolves models again
+    return saved

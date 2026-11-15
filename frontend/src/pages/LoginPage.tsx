@@ -1,222 +1,153 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
-import { authService } from '@/services';
-import {
-    KeyIcon,
-    UserIcon,
-    ArrowRightIcon,
-    SparklesIcon,
-    ShieldCheckIcon,
-    ArrowPathIcon
-} from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import api from '@/services/api';
+import { authService } from '@/services';
+import { useAuthStore } from '@/stores/authStore';
+import { Icon } from '@/components/Icon';
+
+interface Methods {
+    password: boolean;
+    first_run: boolean;
+    signup_open: boolean;
+}
+
+function AssayMark({ className = 'h-7 w-7' }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 32 32" className={className} aria-hidden>
+            <path d="M16 3 L28 26 H4 Z" fill="#0E1510" />
+            <rect x="7" y="17" width="18" height="4" rx="1" fill="#C6F432" />
+        </svg>
+    );
+}
+
+function Field({ label, aside, ...input }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; aside?: React.ReactNode }) {
+    return (
+        <label className="flex flex-col gap-[7px]">
+            <span className="flex justify-between text-[13px] font-semibold text-ink">{label}{aside}</span>
+            <input {...input}
+                className="h-[46px] rounded-xl border border-[#D5DBD0] bg-paper px-3.5 text-[15px] text-ink outline-none transition focus:border-ink focus:ring-0 placeholder:text-muted" />
+        </label>
+    );
+}
 
 export function LoginPage() {
-    const [username, setUsername] = useState('admin');
-    const [password, setPassword] = useState('admin123');
-    const [isLoading, setIsLoading] = useState(false);
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [email, setEmail] = useState('');
-
     const navigate = useNavigate();
-    const login = useAuthStore((state) => state.login);
+    const login = useAuthStore((s) => s.login);
+    const [methods, setMethods] = useState<Methods | null>(null);
+    const [identity, setIdentity] = useState('');
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [show, setShow] = useState(false);
+    const [busy, setBusy] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    useEffect(() => {
+        api.get<Methods>('/auth/methods').then((r) => setMethods(r.data))
+            .catch(() => setMethods({ password: true, first_run: false, signup_open: false }));
+    }, []);
+
+    const creatingAdmin = !!methods?.first_run;
+
+    async function finish(accessToken: string) {
+        useAuthStore.setState({ token: accessToken });
+        const me = await api.get('/auth/me').then((r) => r.data).catch(() => null);
+        login(accessToken, { id: me?.user_id ?? '', username: me?.username ?? identity, email: me?.email ?? email });
+        navigate(creatingAdmin ? '/setup' : '/');
+    }
+
+    async function submit(e: React.FormEvent) {
         e.preventDefault();
-        setIsLoading(true);
-
+        setBusy(true);
         try {
-            if (isRegistering) {
-                await authService.register({ username, email, password });
-                toast.success('Registration successful! Please login.');
-                setIsRegistering(false);
+            if (creatingAdmin) {
+                const t = await authService.register({ username, email, password });
+                toast.success('Admin account created');
+                await finish(t.access_token);
             } else {
-                const tokens = await authService.login({ username, password });
-                // In a real app, we'd fetch the user's profile info here
-                login(tokens.access_token, {
-                    id: '1',
-                    username,
-                    email: email || `${username}@example.com`
-                });
-                toast.success(`Welcome back, ${username}!`);
-                navigate('/');
+                const t = await authService.login({ username: identity, password });
+                await finish(t.access_token);
             }
-        } catch (error) {
-            const axiosError = error as { response?: { data?: { detail?: string } } };
-            const message = axiosError.response?.data?.detail || 'Authentication failed';
-            toast.error(message);
+        } catch (err) {
+            const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+            toast.error(detail || 'Could not sign in');
         } finally {
-            setIsLoading(false);
+            setBusy(false);
         }
-    };
+    }
 
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row bg-dark-950 overflow-hidden">
-            {/* Left Side: Illustration & Branding */}
-            <div className="hidden lg:flex lg:w-1/2 relative bg-dark-900 items-center justify-center p-12 overflow-hidden">
-                {/* Animated background elements */}
-                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-[600px] h-[600px] bg-nvidia/10 rounded-full blur-[120px]" />
-                <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-primary-900/20 rounded-full blur-[100px]" />
-
-                <div className="relative z-10 max-w-lg text-center">
-                    <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="w-24 h-24 rounded-3xl bg-gradient-to-br from-nvidia to-primary-600 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-nvidia/20"
-                    >
-                        <SparklesIcon className="w-12 h-12 text-white" />
-                    </motion.div>
-
-                    <motion.h1
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-4xl font-bold text-white mb-6"
-                    >
-                        NVIDIA NIM Powered <br />
-                        <span className="gradient-text">Assay</span>
-                    </motion.h1>
-
-                    <motion.p
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-dark-400 text-lg leading-relaxed"
-                    >
-                        Experience lightning-fast document intelligence with NVIDIA NIM microservices.
-                        Upload, index, and chat with your knowledge base in seconds.
-                    </motion.p>
-
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                        className="mt-12 grid grid-cols-3 gap-6"
-                    >
-                        {[
-                            { label: 'PDF Parsing', icon: '📄' },
-                            { label: 'Vector Search', icon: '🔍' },
-                            { label: 'NVIDIA LLMs', icon: '🚀' }
-                        ].map((item) => (
-                            <div key={item.label} className="p-4 rounded-2xl glass bg-dark-800/50">
-                                <div className="text-2xl mb-1">{item.icon}</div>
-                                <div className="text-xs font-semibold text-dark-300 uppercase tracking-wider">{item.label}</div>
-                            </div>
-                        ))}
-                    </motion.div>
+        <div className="flex min-h-screen bg-paper text-ink">
+            <div className="flex w-full flex-col px-6 py-10 sm:px-14 lg:w-[600px] lg:shrink-0 lg:px-[88px]">
+                <div className="flex items-center gap-2.5">
+                    <AssayMark />
+                    <span className="font-display text-[23px] font-extrabold tracking-[-0.03em]">assay</span>
                 </div>
-            </div>
 
-            {/* Right Side: Form */}
-            <div className="flex-1 flex items-center justify-center p-8 relative">
-                {/* Mobile background elements */}
-                <div className="lg:hidden absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-nvidia/5 rounded-full blur-[80px]" />
-
-                <div className="w-full max-w-md relative z-10">
-                    <div className="text-center mb-10">
-                        <h2 className="text-3xl font-bold text-white mb-2">
-                            {isRegistering ? 'Create Account' : 'Welcome Back'}
-                        </h2>
-                        <p className="text-dark-500">
-                            {isRegistering
-                                ? 'Join us to start processing your documents'
-                                : 'Sign in to access your RAG workspace'
-                            }
-                        </p>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-4">
-                            {/* Username */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-dark-300 ml-1">Username</label>
-                                <div className="relative">
-                                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
-                                    <input
-                                        type="text"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        placeholder="Enter your username"
-                                        required
-                                        className="w-full pl-12 pr-4 py-3.5 bg-dark-800 border border-dark-700 rounded-2xl text-white placeholder-dark-600 focus:outline-none focus:border-nvidia/50 transition-all focus:ring-4 focus:ring-nvidia/5"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Email (only for registration) */}
-                            {isRegistering && (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-dark-300 ml-1">Email Address</label>
-                                    <div className="relative">
-                                        <ShieldCheckIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            placeholder="Enter your email"
-                                            required={isRegistering}
-                                            className="w-full pl-12 pr-4 py-3.5 bg-dark-800 border border-dark-700 rounded-2xl text-white placeholder-dark-600 focus:outline-none focus:border-nvidia/50 transition-all focus:ring-4 focus:ring-nvidia/5"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Password */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between ml-1">
-                                    <label className="text-sm font-medium text-dark-300">Password</label>
-                                    {!isRegistering && (
-                                        <button type="button" className="text-xs text-dark-500 hover:text-nvidia transition-colors">
-                                            Forgot password?
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="relative">
-                                    <KeyIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="Enter your password"
-                                        required
-                                        className="w-full pl-12 pr-4 py-3.5 bg-dark-800 border border-dark-700 rounded-2xl text-white placeholder-dark-600 focus:outline-none focus:border-nvidia/50 transition-all focus:ring-4 focus:ring-nvidia/5"
-                                    />
-                                </div>
-                            </div>
+                <div className="flex flex-1 flex-col justify-center py-10">
+                    <form onSubmit={submit} className="flex w-full max-w-[424px] flex-col gap-[22px]">
+                        <div className="flex flex-col gap-2">
+                            <h1 className="font-display text-[40px] font-extrabold leading-[42px] tracking-[-0.03em]">
+                                {creatingAdmin ? 'Set up Assay' : 'Sign in'}
+                            </h1>
+                            <p className="text-[15px] text-body">
+                                {creatingAdmin
+                                    ? 'This is a new install. The account you create now is the admin.'
+                                    : 'to your Assay workspace'}
+                            </p>
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full py-4 bg-nvidia hover:bg-nvidia-dark text-white font-bold rounded-2xl transition-all relative overflow-hidden group shadow-lg shadow-nvidia/20"
-                        >
-                            <div className="relative z-10 flex items-center justify-center gap-2">
-                                {isLoading ? (
-                                    <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        <span>{isRegistering ? 'Sign Up' : 'Sign In'}</span>
-                                        <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                    </>
-                                )}
-                            </div>
-                        </button>
-                    </form>
+                        {creatingAdmin ? (
+                            <>
+                                <Field label="Name" value={username} onChange={(e) => setUsername(e.target.value)}
+                                    placeholder="priya" autoComplete="username" required minLength={3} />
+                                <Field label="Work email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="you@company.com" autoComplete="email" required />
+                            </>
+                        ) : (
+                            <Field label="Email or username" value={identity} onChange={(e) => setIdentity(e.target.value)}
+                                placeholder="you@company.com" autoComplete="username" required autoFocus />
+                        )}
 
-                    <div className="mt-8 text-center">
-                        <p className="text-dark-500">
-                            {isRegistering ? 'Already have an account?' : "Don't have an account?"}{' '}
-                            <button
-                                type="button"
-                                onClick={() => setIsRegistering(!isRegistering)}
-                                className="text-nvidia font-bold hover:underline"
-                            >
-                                {isRegistering ? 'Sign In' : 'Create One'}
-                            </button>
+                        <Field label="Password" type={show ? 'text' : 'password'} value={password}
+                            onChange={(e) => setPassword(e.target.value)} required minLength={creatingAdmin ? 8 : 1}
+                            autoComplete={creatingAdmin ? 'new-password' : 'current-password'}
+                            aside={<button type="button" onClick={() => setShow((v) => !v)}
+                                className="text-[13px] font-medium text-assay">{show ? 'Hide' : 'Show'}</button>} />
+
+                        <button type="submit" disabled={busy || !methods}
+                            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-ink text-[15px] font-semibold text-white transition hover:bg-[#1A241D] disabled:opacity-60">
+                            {busy ? 'One moment…' : creatingAdmin ? 'Create admin account' : 'Sign in'}
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="#C6F432" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </button>
+
+                        {!creatingAdmin && (
+                            <p className="text-[13px] text-body">
+                                New here? <span className="font-semibold text-assay">
+                                    {methods?.signup_open ? 'Ask for an account, or create one below' : 'Ask your admin for an invite'}</span>
+                            </p>
+                        )}
+                    </form>
+                </div>
+
+                <p className="flex items-center gap-2 text-xs text-muted">
+                    <Icon name="verify" className="h-3.5 w-3.5" />
+                    Self-hosted. Your documents never leave this workspace.
+                </p>
+            </div>
+
+            <div className="hidden flex-1 p-4 lg:flex">
+                <div className="relative flex flex-1 flex-col justify-end overflow-hidden rounded-3xl bg-ink p-11">
+                    <img src="/brand/art/signin.webp" alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="relative flex max-w-[520px] flex-col gap-3.5">
+                        <p className="font-display text-[44px] font-extrabold leading-[46px] tracking-[-0.03em] text-white">
+                            Every answer, tested against the page it came from.
                         </p>
+                        <div className="flex flex-wrap gap-2 text-[13px] text-[#D6DDD7]">
+                            {['Claim-level citations', 'Any model', 'Self-hosted'].map((t) => (
+                                <span key={t} className="rounded-full border border-[#2A352D] bg-ink/70 px-[11px] py-1.5">{t}</span>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

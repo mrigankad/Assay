@@ -168,7 +168,7 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = Field(default=60)
     allow_anonymous_chat: bool = Field(default=True, description="Allow /chat without a JWT (dev only)")
     default_admin_username: str = Field(default="admin")
-    default_admin_password: str = Field(default="admin123")
+    default_admin_password: str = Field(default="", description="Seed an admin with this password on start; empty = create the first admin in the UI")
 
     # ==========================================
     # Access control

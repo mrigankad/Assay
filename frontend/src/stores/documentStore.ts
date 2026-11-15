@@ -46,8 +46,7 @@ export const useDocumentStore = create<DocumentState>((set) => ({
         set({ documents: docs });
     },
 
-    deleteDocument: async (id: string, name: string) => {
-        if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+    deleteDocument: async (id: string, _name: string) => {
 
         try {
             await documentService.delete(id);

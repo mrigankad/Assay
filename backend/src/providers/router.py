@@ -82,7 +82,35 @@ def _pick_model(d: Detected, cap: str) -> Optional[str]:
     return f"{spec.prefix}/{m}" if spec.prefix and not m.startswith(spec.prefix + "/") else m
 
 
+PREFS_PATH = os.getenv("ASSAY_PREFS_PATH", os.path.join(os.getcwd(), "data", "model_prefs.json"))
+
+
+def load_prefs() -> dict:
+    """Saved choices from the UI: {"default": "claude_code/", "roles": {"verifier": "..."}}."""
+    import json
+    try:
+        with open(PREFS_PATH, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_prefs(prefs: dict) -> dict:
+    import json
+    os.makedirs(os.path.dirname(PREFS_PATH), exist_ok=True)
+    clean = {"default": prefs.get("default") or None,
+             "roles": {k: v for k, v in (prefs.get("roles") or {}).items() if k in ROLES and v}}
+    with open(PREFS_PATH, "w", encoding="utf-8") as fh:
+        json.dump(clean, fh, indent=2)
+    return clean
+
+
 def _env_model(role: str) -> Optional[str]:
+    """UI choice for this role, then env for this role, then UI default, then env default."""
+    prefs = load_prefs()
+    if prefs.get("roles", {}).get(role):
+        return prefs["roles"][role]
     v = os.getenv(f"ASSAY_MODEL_{role.upper()}")
     if v:
         return v
@@ -90,6 +118,8 @@ def _env_model(role: str) -> Optional[str]:
         return os.getenv("ASSAY_EMBED_MODEL")
     if role == "rerank":
         return os.getenv("ASSAY_RERANK_MODEL")
+    if prefs.get("default"):
+        return prefs["default"]
     return os.getenv("ASSAY_MODEL")
 
 
