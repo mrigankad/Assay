@@ -70,11 +70,11 @@ export function Layout() {
 
                 <div className="flex-1" />
 
-                <div className="flex items-center gap-2 px-2.5 text-xs text-body">
-                    <span className={clsx('h-2 w-2 rounded-full',
-                        health === 'healthy' && 'bg-assay', health === 'unhealthy' && 'bg-dropped', health === 'loading' && 'bg-conflict')} />
-                    {health === 'healthy' ? 'Engine online' : health === 'unhealthy' ? 'Engine offline' : 'Checking…'}
-                </div>
+                {health === 'unhealthy' && (
+                    <div className="flex items-center gap-2 rounded-lg bg-dropped/10 px-2.5 py-2 text-xs font-medium text-dropped">
+                        <span className="h-2 w-2 rounded-full bg-dropped" />Can't reach the Assay server
+                    </div>
+                )}
 
                 {isAuthenticated && user && (
                     <div className="flex items-center gap-2.5 rounded-xl border border-rule bg-paper p-3">
