@@ -131,7 +131,8 @@ async def _run(request: ChatRequest, user, session_id: str) -> AsyncGenerator[St
             session_id, "assistant", answer.text, user_id,
             metadata={"sources": [e.to_legacy_source() for e in answer.evidence], "trace_id": answer.trace_id,
                       "intent": answer.intent.value, "confidence": answer.confidence.value,
-                      "citations": [c.model_dump() for c in answer.citations], "answer_id": answer.answer_id},
+                      "citations": [c.model_dump() for c in answer.citations], "answer_id": answer.answer_id,
+                      "claims": answer.claims},
         )
         yield StreamEvent(event="metadata", data={"message_id": message_id, "session_id": session_id,
                                                   "route": answer.route, "trace_id": answer.trace_id,

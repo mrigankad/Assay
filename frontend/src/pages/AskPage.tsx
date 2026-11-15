@@ -6,7 +6,7 @@ import { useChatStore } from '@/stores/chatStore';
 import api from '@/services/api';
 import { Icon } from '@/components/Icon';
 import { PageHighlight } from '@/components/PageHighlight';
-import type { Evidence, Message, ProgressStage } from '@/types';
+import type { Claim, Evidence, Message, ProgressStage } from '@/types';
 
 const STAGES: { key: ProgressStage[]; label: string; icon: string }[] = [
     { key: ['understanding', 'routing', 'planning'], label: 'Plan', icon: 'planner' },
@@ -113,6 +113,51 @@ function Sources({ ev, selected, onSelect }: { ev: Evidence[]; selected: number 
                     <span className="w-12 shrink-0 text-right font-semibold text-assay">{e.rerank_score != null ? e.rerank_score.toFixed(2) : `#${i + 1}`}</span>
                 </button>
             ))}
+        </div>
+    );
+}
+
+const CLAIM_STYLE: Record<Claim['status'], { label: string; dot: string; text: string }> = {
+    supported: { label: 'Backed by the cited passage', dot: 'bg-assay', text: 'text-assay' },
+    partial: { label: 'Loosely backed: paraphrase or inference', dot: 'bg-conflict', text: 'text-conflict' },
+    unsupported: { label: 'Not found in the cited passage', dot: 'bg-dropped', text: 'text-dropped' },
+    uncited: { label: 'A figure with no citation', dot: 'bg-dropped', text: 'text-dropped' },
+};
+
+/** Claim-by-claim check. Collapsed to a one-line summary unless something needs a look. */
+function Claims({ claims, onCite }: { claims: Claim[]; onCite: (n: number) => void }) {
+    const flagged = claims.filter((c) => c.status !== 'supported');
+    const [open, setOpen] = useState(flagged.some((c) => c.status === 'unsupported' || c.status === 'uncited'));
+    const backed = claims.length - flagged.length;
+    return (
+        <div className="flex flex-col gap-2 rounded-[14px] border border-rule bg-bench px-4 py-3">
+            <button onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-2 text-left text-[13px] font-semibold">
+                <Icon name="verify" className={clsx('h-4 w-4', flagged.length ? 'text-conflict' : 'text-assay')} strokeWidth={2} />
+                <span>{backed} of {claims.length} claims backed by their sources</span>
+                {flagged.length > 0 && <span className="font-medium text-body">· {flagged.length} to check</span>}
+                <svg viewBox="0 0 16 16" className={clsx('ml-auto h-4 w-4 text-body transition-transform', open && 'rotate-180')} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="m4 6 4 4 4-4" /></svg>
+            </button>
+            {open && (
+                <ul className="flex flex-col">
+                    {claims.map((c, i) => {
+                        const st = CLAIM_STYLE[c.status];
+                        return (
+                            <li key={i} className="flex gap-3 border-t border-rule py-2.5 text-[13px] leading-5">
+                                <span className={clsx('mt-[7px] h-2 w-2 shrink-0 rounded-full', st.dot)} title={st.label} />
+                                <div className="flex min-w-0 flex-col gap-0.5">
+                                    <span className="text-ink">{c.text}</span>
+                                    <span className={clsx('flex flex-wrap items-center gap-x-2 text-xs', st.text)}>
+                                        {st.label}{c.missing.length ? `: ${c.missing.join(', ')} not in the source` : ''}
+                                        {c.markers.map((n) => (
+                                            <button key={n} onClick={() => onCite(n)} className="font-semibold text-assay hover:underline">[{n}]</button>
+                                        ))}
+                                    </span>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
         </div>
     );
 }
@@ -240,6 +285,7 @@ export function AskPage() {
                                         {a.confidence && <span className={clsx(a.confidence === 'high' ? 'text-assay' : a.confidence === 'medium' ? 'text-conflict' : 'text-dropped')}>Confidence {a.confidence}</span>}
                                     </div>
                                 )}
+                                {a?.status === 'done' && a.claims?.length ? <Claims claims={a.claims} onCite={(n) => setSelected({ msg: a.id, n })} /> : null}
                                 {a?.evidence && <Sources ev={a.evidence} selected={selected?.msg === a.id ? selected.n : null}
                                     onSelect={(n) => setSelected({ msg: a.id, n })} />}
                             </section>

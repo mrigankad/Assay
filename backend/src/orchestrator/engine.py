@@ -27,6 +27,7 @@ from src.services.llm.llm_service import LLMUsage, LLMService, get_llm_service
 from .executor import ExecutionResult, PlanExecutor
 from .planner import QueryPlanner
 from .router import QueryRouter, RouteDecision
+from .claims import check_claims
 from .synthesizer import Synthesizer, assess_confidence, resolve_citations
 
 logger = get_logger(__name__)
@@ -111,6 +112,7 @@ class RetrievalEngine:
         confidence = Confidence.LOW
         warnings: List[str] = []
         citations = []
+        claims: List[dict] = []
         blocks: List[AnswerBlock] = []
 
         with trace_span("assay.answer", {"gen_ai.operation.name": "invoke_agent", "gen_ai.agent.name": "assay",
@@ -234,6 +236,7 @@ class RetrievalEngine:
                         raw = "".join(text_parts)
                         cleaned, citations = resolve_citations(raw, execution.evidence)
                         confidence = assess_confidence(execution.evidence, citations, cleaned)
+                        claims = check_claims(cleaned, execution.evidence, execution.context)
                         if cleaned != raw:
                             text_parts = [cleaned]
                             warnings.append("Removed citations that did not match any evidence")
@@ -247,7 +250,7 @@ class RetrievalEngine:
                 prompt_tokens=usage.prompt_tokens, completion_tokens=usage.completion_tokens, confidence=confidence,
                 model=self.llm.model, extra={"route_method": decision.method if decision else None,
                                              "backend": self.adapter.name, "warnings": warnings, "answer_id": answer_id,
-                                             "citations": [c.model_dump() for c in citations]},
+                                             "citations": [c.model_dump() for c in citations], "claims": claims},
             )
             await self._emit_trace(trace)
             set_span_attributes(root_span, {"assay.intent": intent.value, "assay.confidence": confidence.value,
@@ -255,12 +258,12 @@ class RetrievalEngine:
                                             "gen_ai.usage.input_tokens": usage.prompt_tokens, "gen_ai.usage.output_tokens": usage.completion_tokens})
             self.last_answer = Answer(
                 answer_id=answer_id, session_id=session_id, text=final_text, intent=intent, confidence=confidence,
-                blocks=blocks, evidence=execution.evidence if execution else [], citations=citations, latency_ms=latency,
+                blocks=blocks, evidence=execution.evidence if execution else [], citations=citations, claims=claims, latency_ms=latency,
                 trace_id=trace_id, route="rag_pipeline" if execution else intent.value.lower(), usage=usage.to_dict(),
                 warnings=warnings,
             )
             yield DoneEvent(answer_id=answer_id, confidence=confidence.value, latency_ms=latency, trace_id=trace_id,
-                            session_id=session_id, citations=[c.model_dump() for c in citations],
+                            session_id=session_id, citations=[c.model_dump() for c in citations], claims=claims,
                             usage=usage.to_dict()).to_stream()
           except Exception as exc:
             logger.exception("Engine failure", error=str(exc), trace_id=trace_id)

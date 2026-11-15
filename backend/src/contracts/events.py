@@ -53,6 +53,7 @@ class DoneEvent(BaseModel):
     session_id: Optional[str] = None
     message_id: Optional[str] = None
     citations: List[Dict[str, Any]] = Field(default_factory=list)
+    claims: List[Dict[str, Any]] = Field(default_factory=list)
     usage: Dict[str, Any] = Field(default_factory=dict)
 
     def to_stream(self) -> StreamEvent:

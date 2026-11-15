@@ -304,6 +304,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                         trace_id: done.trace_id || undefined,
                         latency_ms: done.latency_ms,
                         citations: done.citations,
+                        claims: done.claims,
                     });
                 },
             }
@@ -325,6 +326,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                         trace_id: metadata.trace_id || msg.trace_id,
                         latency_ms: metadata.latency_ms ?? msg.latency_ms,
                         citations: metadata.citations || msg.citations,
+                        claims: metadata.claims || msg.claims,
                         warnings: metadata.warning ? [...(msg.warnings || []), metadata.warning] : msg.warnings,
                     }
                     : msg

@@ -55,6 +55,7 @@ class Answer(BaseModel):
     confidence: Confidence = Confidence.MEDIUM
     blocks: List[AnswerBlock] = Field(default_factory=list)
     evidence: List[Evidence] = Field(default_factory=list)
+    claims: List[Dict[str, Any]] = Field(default_factory=list)   # claim-by-claim check (see orchestrator/claims.py)
     citations: List[Citation] = Field(default_factory=list)
     latency_ms: float = 0.0
     trace_id: Optional[str] = None

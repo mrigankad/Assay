@@ -76,6 +76,7 @@ export interface DoneEventData {
     trace_id?: string | null;
     session_id?: string | null;
     citations: Citation[];
+    claims?: Claim[];
     usage: Record<string, number>;
 }
 
@@ -140,6 +141,14 @@ export interface Source {
     bbox?: number[];
 }
 
+/** One sentence of an answer, checked against the passages it cites (backend orchestrator/claims.py). */
+export interface Claim {
+    text: string;
+    markers: number[];
+    status: 'supported' | 'partial' | 'unsupported' | 'uncited';
+    missing: string[];
+}
+
 export interface Message {
     id: string;
     backend_id?: string;
@@ -149,6 +158,7 @@ export interface Message {
     sources?: Source[];
     evidence?: Evidence[];
     citations?: Citation[];
+    claims?: Claim[];
     blocks?: AnswerBlock[];
     status: MessageStatus;
     stage?: ProgressEventData;
