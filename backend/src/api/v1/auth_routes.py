@@ -80,15 +80,68 @@ def _signup_open() -> bool:
     return os.getenv("ALLOW_SIGNUP", "false").lower() in {"1", "true", "yes"}
 
 
+class SSORequest(BaseModel):
+    provider: str = Field(..., pattern="^(entra|oidc)$")
+    id_token: str = Field(..., min_length=20, max_length=20000)
+    nonce: str = Field(..., min_length=8, max_length=200)
+
+
+@router.post("/sso", response_model=TokenPair)
+async def sso_sign_in(body: SSORequest, db: DbSession):
+    """Exchange a provider ID token (from the browser's PKCE flow) for an Assay session.
+
+    Existing users are matched by verified email. New people get an account only on a
+    fresh install (first one becomes admin) or when SSO_AUTO_CREATE is on (default) and
+    their email domain is in SSO_ALLOWED_DOMAINS (empty = any)."""
+    import os
+    import secrets as _secrets
+    from src.core.oidc import OIDCError, claims_email, provider, verify_id_token
+    p = provider(body.provider)
+    if p is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{body.provider} sign-in is not configured")
+    try:
+        claims = verify_id_token(p, body.id_token, body.nonce)
+    except OIDCError as exc:
+        logger.warning("SSO token rejected", provider=p.name, error=str(exc))
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign-in could not be verified")
+    email = claims_email(p, claims)
+    if not email:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Your account has no verified email address")
+    user = await db.scalar(select(User).where(User.email == email))
+    if user is None:
+        first = await _user_count(db) == 0
+        domains = [d.strip().lower() for d in os.getenv("SSO_ALLOWED_DOMAINS", "").split(",") if d.strip()]
+        auto = os.getenv("SSO_AUTO_CREATE", "true").lower() in {"1", "true", "yes"}
+        if not first and (not auto or (domains and email.split("@")[1] not in domains)):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "No Assay account for this email. Ask your admin for an invite.")
+        base = (email.split("@")[0] or "user")[:40]
+        username, i = base, 1
+        while await db.scalar(select(User).where(User.username == username)) is not None:
+            i += 1
+            username = f"{base}{i}"
+        groups = [str(g) for g in (claims.get("groups") or [])]
+        is_admin = first or (p.name == "entra" and settings.entra_admin_group and settings.entra_admin_group in groups)
+        user = User(username=username, email=email, password_hash=hash_password(_secrets.token_urlsafe(32)),
+                    tenant_id=settings.default_tenant_id, role="admin" if is_admin else "user", groups="")
+        db.add(user)
+        await db.flush()
+        logger.info("SSO user created", user_id=str(user.id), provider=p.name)
+    if not user.is_active:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This account is disabled")
+    logger.info("SSO sign-in", user_id=str(user.id), provider=p.name)
+    return _tokens_for(user)
+
+
 @router.get("/methods")
 async def sign_in_methods(db: DbSession):
     """What the sign-in page should offer, and whether this is a fresh install."""
     import os
     first_run = await _user_count(db) == 0
-    entra = settings.auth_mode in ("entra", "both") and bool(settings.entra_tenant_id and settings.entra_client_id)
+    from src.core.auth import entra_issuer
+    entra = bool(settings.entra_tenant_id and settings.entra_client_id)
     return {
         "password": settings.auth_mode in ("local", "both"),
-        "entra": {"enabled": entra, "tenant_id": settings.entra_tenant_id or None,
+        "entra": {"enabled": entra, "tenant_id": settings.entra_tenant_id or None, "issuer": entra_issuer(),
                   "client_id": settings.entra_client_id or None} if entra else {"enabled": False},
         "oidc": {"enabled": bool(os.getenv("OIDC_ISSUER")), "issuer": os.getenv("OIDC_ISSUER") or None,
                  "client_id": os.getenv("OIDC_CLIENT_ID") or None, "label": os.getenv("OIDC_LABEL", "SSO")},

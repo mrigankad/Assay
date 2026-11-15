@@ -5,9 +5,12 @@ import api from '@/services/api';
 import { authService } from '@/services';
 import { useAuthStore } from '@/stores/authStore';
 import { Icon } from '@/components/Icon';
+import { startSso, type SsoProvider } from '@/services/sso';
 
 interface Methods {
     password: boolean;
+    entra?: { enabled: boolean; issuer?: string; client_id?: string };
+    oidc?: { enabled: boolean; issuer?: string; client_id?: string; label?: string };
     first_run: boolean;
     signup_open: boolean;
 }
@@ -48,6 +51,21 @@ export function LoginPage() {
     }, []);
 
     const creatingAdmin = !!methods?.first_run;
+    const sso: { id: SsoProvider; label: string; issuer: string; client: string }[] = [];
+    if (methods?.entra?.enabled && methods.entra.issuer && methods.entra.client_id) {
+        sso.push({ id: 'entra', label: 'Continue with Microsoft', issuer: methods.entra.issuer, client: methods.entra.client_id });
+    }
+    if (methods?.oidc?.enabled && methods.oidc.issuer && methods.oidc.client_id) {
+        sso.push({ id: 'oidc', label: `Continue with ${methods.oidc.label || 'SSO'}`, issuer: methods.oidc.issuer, client: methods.oidc.client_id });
+    }
+
+    async function sign(p: (typeof sso)[number]) {
+        try {
+            await startSso(p.id, p.issuer, p.client);
+        } catch (e) {
+            toast.error((e as Error).message);
+        }
+    }
 
     async function finish(accessToken: string) {
         useAuthStore.setState({ token: accessToken });
@@ -96,6 +114,25 @@ export function LoginPage() {
                                     : 'to your Assay workspace'}
                             </p>
                         </div>
+
+                        {sso.length > 0 && (
+                            <>
+                                <div className="flex flex-col gap-2.5">
+                                    {sso.map((p) => (
+                                        <button key={p.id} type="button" onClick={() => sign(p)}
+                                            className="flex h-[46px] items-center justify-center gap-2.5 rounded-xl border border-[#D5DBD0] text-[15px] font-medium hover:border-ink">
+                                            {p.id === 'entra' ? (
+                                                <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><rect x="2" y="2" width="9.5" height="9.5" fill="#F25022" /><rect x="12.5" y="2" width="9.5" height="9.5" fill="#7FBA00" /><rect x="2" y="12.5" width="9.5" height="9.5" fill="#00A4EF" /><rect x="12.5" y="12.5" width="9.5" height="9.5" fill="#FFB900" /></svg>
+                                            ) : <Icon name="lock" className="h-[18px] w-[18px]" />}
+                                            {p.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-3 text-[13px] text-muted">
+                                    <span className="h-px flex-1 bg-rule" />or with email<span className="h-px flex-1 bg-rule" />
+                                </div>
+                            </>
+                        )}
 
                         {creatingAdmin ? (
                             <>

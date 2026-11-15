@@ -90,7 +90,7 @@ def verify_entra_token(token: str) -> Optional[TokenData]:
     options = {"verify_aud": bool(settings.entra_client_id), "verify_iss": bool(settings.entra_tenant_id or settings.entra_issuer)}
     try:
         claims = jwt.decode(
-            token, key, algorithms=[header.get("alg", "RS256")],
+            token, key, algorithms=["RS256"],          # never trust the alg the token names
             audience=settings.entra_client_id or None,
             issuer=entra_issuer() if options["verify_iss"] else None,
             options=options,
