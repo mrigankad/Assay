@@ -33,7 +33,7 @@ Each agent role (planner, search, experts, verifier, browser, vision, writer, em
 You need Python 3.12+, Node 20+ and one model source (an API key, a cloud login, or Ollama running locally).
 
 ```bash
-git clone https://github.com/mrigankad/assay.git && cd assay
+git clone https://github.com/mrigankad/Dexter-retrival-engine.git assay && cd assay
 cp .env.example .env            # add a key, or skip this if Ollama / a cloud login is already set up
 
 cd backend
