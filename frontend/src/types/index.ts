@@ -35,6 +35,7 @@ export interface Evidence {
     rerank_score?: number | null;
     backend: string;
     content_type: string;
+    metadata?: Record<string, unknown>;
 }
 
 export interface Citation {

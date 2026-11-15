@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import clsx from 'clsx';
 import { useChatStore } from '@/stores/chatStore';
+import api from '@/services/api';
 import { Icon } from '@/components/Icon';
 import type { Evidence, Message, ProgressStage } from '@/types';
 
@@ -149,6 +150,11 @@ function EvidencePane({ e, n, onClose }: { e: Evidence | null; n: number | null;
                     {e.snippet}
                 </div>
             </div>
+            {e.type === 'web' && (
+                <p className="text-xs text-body">
+                    Web page snapshot{typeof e.metadata?.fetched_at === 'string' ? ` taken ${new Date(e.metadata.fetched_at).toLocaleString()}` : ''}. Treated as a lower-trust source than your documents.
+                </p>
+            )}
             {e.locator.url && (
                 <a href={e.locator.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[13px] font-semibold text-assay">
                     <Icon name="export" className="h-4 w-4" />Open the source page
@@ -159,7 +165,11 @@ function EvidencePane({ e, n, onClose }: { e: Evidence | null; n: number | null;
 }
 
 export function AskPage() {
-    const { messages, sendMessage, cancelStream, isStreaming, clearMessages } = useChatStore();
+    const { messages, sendMessage, cancelStream, isStreaming, clearMessages, useWeb, setUseWeb } = useChatStore();
+    const [web, setWeb] = useState<{ mode: string; ready: boolean } | null>(null);
+    useEffect(() => {
+        api.get('/providers/runtime').then((r) => setWeb(r.data.web)).catch(() => setWeb(null));
+    }, []);
     const [draft, setDraft] = useState('');
     const [selected, setSelected] = useState<{ msg: string; n: number } | null>(null);
     const endRef = useRef<HTMLDivElement>(null);
@@ -236,6 +246,14 @@ export function AskPage() {
                         className="flex items-center gap-3 rounded-[14px] border border-[#D5DBD0] bg-paper py-2 pl-[18px] pr-2 focus-within:border-ink">
                         <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={turns.length ? 'Ask a follow up' : 'Ask a question about your documents'}
                             className="flex-1 bg-transparent py-2 text-[15px] outline-none placeholder:text-muted" />
+                        {web?.ready && (
+                            <button type="button" onClick={() => setUseWeb(!useWeb)} aria-pressed={useWeb}
+                                title={web.mode === 'auto' ? 'The web is also searched when documents have nothing' : 'Search the web for this question'}
+                                className={clsx('flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium',
+                                    useWeb ? 'bg-ink text-white' : 'bg-bench text-body')}>
+                                <Icon name="web" className={clsx('h-4 w-4', useWeb && 'text-lime')} />Web
+                            </button>
+                        )}
                         {turns.length > 0 && !isStreaming && (
                             <button type="button" onClick={() => { clearMessages(); setSelected(null); }} className="text-xs text-body">New</button>
                         )}

@@ -16,6 +16,7 @@ export interface StreamChatPayload {
     session_id?: string;
     stream: boolean;
     use_rag: boolean;
+    use_web?: boolean;
     document_ids?: string[];
 }
 

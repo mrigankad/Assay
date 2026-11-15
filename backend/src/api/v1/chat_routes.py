@@ -47,6 +47,7 @@ class ChatRequest(BaseModel):
     top_k: Optional[int] = Field(default=None, ge=1, le=50)
     reasoning_effort: str = Field(default="low", pattern="^(minimal|low|medium)$")
     backend: Optional[str] = Field(default=None, description="Override KNOWLEDGE_BACKEND for this request")
+    use_web: bool = Field(default=False, description="Also search the web for this question (needs WEB_MODE=ask or auto)")
 
 
 class ChatResponse(BaseModel):
@@ -121,7 +122,7 @@ async def _run(request: ChatRequest, user, session_id: str) -> AsyncGenerator[St
         request.query, session_id=session_id, user_id=user_id, tenant_id=user.tenant_id if user else None,
         chat_history=history, filters=filters,
         use_rag=request.use_rag, top_k=request.top_k, reasoning_effort=request.reasoning_effort,
-        has_documents=await _has_documents(),
+        has_documents=await _has_documents(), use_web=bool(request.use_web and user is not None),  # no web for anonymous chat
     ):
         yield event
     answer: Optional[Answer] = getattr(engine, "last_answer", None)

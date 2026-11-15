@@ -94,6 +94,7 @@ class RetrievalEngine:
         top_k: Optional[int] = None,
         reasoning_effort: str = "low",
         has_documents: bool = True,
+        use_web: bool = False,
     ) -> AsyncGenerator[StreamEvent, None]:
         started = time.perf_counter()
         trace_id = f"tr_{uuid.uuid4().hex[:12]}"
@@ -157,7 +158,7 @@ class RetrievalEngine:
                     text_parts.append(token)
                     yield AnswerDeltaEvent(text=token).to_stream()
                 confidence = Confidence.HIGH
-            elif not has_documents and self.adapter.name == "local" and intent == Intent.KNOWLEDGE:
+            elif not has_documents and not use_web and self.adapter.name == "local" and intent == Intent.KNOWLEDGE:
                 msg = ("No documents have been indexed yet, so I can't answer this from your knowledge base. "
                        "Upload a document first (Documents page) and ask again once it shows as completed.")
                 text_parts.append(msg)
@@ -182,8 +183,11 @@ class RetrievalEngine:
                         yield ProgressEvent(stage="retrieving", label=f"Searching {self.adapter.name} knowledge").to_stream()
                     with trace_span("assay.retrieve", {"gen_ai.operation.name": "retrieval", "assay.steps": len(plan.steps),
                                                         "assay.multi_hop": plan.is_multi_hop}) as retrieve_span:
+                        if use_web:
+                            yield ProgressEvent(stage="retrieving", label="Searching the web").to_stream()
                         execution = await self.executor.execute(
                             plan, filters=filters, top_k=top_k, reasoning_effort=reasoning_effort, usage=usage,
+                            use_web=use_web, query=query,
                         )
                         set_span_attributes(retrieve_span, {
                             "assay.evidence_count": len(execution.evidence), "assay.data_results": len(execution.data_results),

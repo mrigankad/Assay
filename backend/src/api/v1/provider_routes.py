@@ -91,6 +91,7 @@ async def runtime():
         "acl_enforcement": settings.acl_enforcement,
         "auth_mode": settings.auth_mode,
         "knowledge_backend": settings.knowledge_backend,
+        "web": __import__("src.web", fromlist=["web_available"]).web_available(),
     }
 
 

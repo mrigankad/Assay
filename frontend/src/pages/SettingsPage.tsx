@@ -8,6 +8,7 @@ import { providerLogo, providerService, type CatalogProvider } from '@/services/
 interface Runtime {
     local_compute: boolean; scan_local: boolean; enabled_clis: string[]; blocked: string[];
     default_visibility: string; acl_enforcement: boolean; auth_mode: string; knowledge_backend: string;
+    web?: { mode: string; search_backend: string | null; ready: boolean };
 }
 interface Methods { password: boolean; entra: { enabled: boolean; tenant_id?: string | null }; oidc: { enabled: boolean; issuer?: string | null }; signup_open: boolean }
 interface Prefs { default?: string | null; roles?: Record<string, string>; blocked?: string[] }
@@ -141,6 +142,13 @@ export function SettingsPage() {
                     <Row icon={<Icon name="airgap" className="h-5 w-5" />} title="Keep inference off this machine"
                         body={<>{rt?.local_compute ? 'Local models may run here.' : 'No local model weights; cloud and login-based models only.'} Set with {env('ASSAY_LOCAL_COMPUTE')}</>}
                         right={<Status on={rt ? !rt.local_compute : false} />} />
+                    <Row icon={<Icon name="web" className="h-5 w-5" />} title="Web search"
+                        body={rt?.web?.mode === 'off' || !rt?.web
+                            ? <>Off. Set {env('WEB_MODE=ask')} and a search key ({env('TAVILY_API_KEY')}, {env('BRAVE_API_KEY')}, {env('EXA_API_KEY')} or {env('SEARXNG_URL')})</>
+                            : !rt.web.search_backend
+                                ? <>Mode {rt.web.mode}, but no search backend: set {env('TAVILY_API_KEY')} or {env('SEARXNG_URL')}</>
+                                : <>{rt.web.mode === 'auto' ? 'When asked, and when documents have nothing' : 'Only when someone ticks Web on a question'} · {rt.web.search_backend} · pages are snapshotted, robots.txt respected, read-only</>}
+                        right={<Status on={!!rt?.web?.ready} label={rt?.web?.ready ? rt.web.mode === 'auto' ? 'Auto' : 'Ask' : 'Off'} />} />
                     <Row icon={<Icon name="models" className="h-5 w-5" />} title="Vendor CLI logins"
                         body={rt?.enabled_clis.length ? `Enabled: ${rt.enabled_clis.map((c) => byId[c]?.name.replace(/ \(.*\)/, '') ?? c).join(', ')} · personal use only` : 'None enabled'}
                         right={<Status on={!!rt?.enabled_clis.length} />} />

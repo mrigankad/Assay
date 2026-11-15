@@ -58,6 +58,7 @@ interface ChatState {
     isStreaming: boolean;
     isLoading: boolean;
     useRag: boolean;
+    useWeb: boolean;
     selectedDocumentIds: string[];
     streamingMessageId: string | null;
     activeAbortController: AbortController | null;
@@ -79,6 +80,7 @@ interface ChatState {
 
     // Settings
     setUseRag: (useRag: boolean) => void;
+    setUseWeb: (useWeb: boolean) => void;
     setSessionId: (sessionId: string) => void;
     setSelectedDocumentIds: (ids: string[]) => void;
     toggleDocumentSelection: (id: string) => void;
@@ -99,6 +101,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     isStreaming: false,
     isLoading: false,
     useRag: true,
+    useWeb: false,
     selectedDocumentIds: [],
     streamingMessageId: null,
     activeAbortController: null,
@@ -248,6 +251,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 query: content.trim(),
                 stream: true,
                 use_rag: get().useRag,
+                use_web: get().useWeb,
                 session_id: get().sessionId || undefined,
                 document_ids: get().selectedDocumentIds.filter(Boolean).length > 0 ? get().selectedDocumentIds.filter(Boolean) : undefined,
             },
@@ -388,6 +392,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 query: userMessage.content,
                 stream: true,
                 use_rag: get().useRag,
+                use_web: get().useWeb,
                 session_id: get().sessionId || undefined,
                 document_ids: get().selectedDocumentIds.filter(Boolean).length > 0 ? get().selectedDocumentIds.filter(Boolean) : undefined,
             },
@@ -413,6 +418,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // ── Settings ──────────────────────────────────────────
 
     setUseRag: (useRag: boolean) => set({ useRag }),
+    setUseWeb: (useWeb: boolean) => set({ useWeb }),
 
     setSessionId: (sessionId: string) => set({ sessionId }),
 
