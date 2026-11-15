@@ -137,6 +137,7 @@ from src.api.v1.knowledge_routes import router as knowledge_router  # noqa: E402
 from src.api.v1.trace_routes import router as trace_router  # noqa: E402
 from src.api.v1.provider_routes import router as provider_router  # noqa: E402
 from src.api.v1.matrix_routes import router as matrix_router  # noqa: E402
+from src.api.v1.page_routes import router as page_router  # noqa: E402
 
 for prefix in ("", "/v1"):
     tag_suffix = " (v1)" if prefix else ""
@@ -148,6 +149,7 @@ for prefix in ("", "/v1"):
     app.include_router(trace_router, prefix=f"{prefix}/traces", tags=["Traces" + tag_suffix], include_in_schema=not prefix)
     app.include_router(connector_router, prefix=f"{prefix}/connectors", tags=["Connectors" + tag_suffix], include_in_schema=not prefix)
     app.include_router(data_router, prefix=f"{prefix}/data", tags=["Structured data" + tag_suffix], include_in_schema=not prefix)
+    app.include_router(page_router, prefix=prefix, tags=["Documents" + tag_suffix], include_in_schema=not prefix)
     app.include_router(matrix_router, prefix=f"{prefix}/matrix", tags=["Matrix" + tag_suffix], include_in_schema=not prefix)
     app.include_router(provider_router, prefix=f"{prefix}/providers", tags=["Providers" + tag_suffix], include_in_schema=not prefix)
     app.include_router(evaluation_router, prefix=f"{prefix}/evaluations", tags=["Evaluation" + tag_suffix], include_in_schema=not prefix)

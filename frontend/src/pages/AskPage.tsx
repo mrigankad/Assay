@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { useChatStore } from '@/stores/chatStore';
 import api from '@/services/api';
 import { Icon } from '@/components/Icon';
+import { PageHighlight } from '@/components/PageHighlight';
 import type { Evidence, Message, ProgressStage } from '@/types';
 
 const STAGES: { key: ProgressStage[]; label: string; icon: string }[] = [
@@ -126,6 +127,7 @@ function EvidencePane({ e, n, onClose }: { e: Evidence | null; n: number | null;
         );
     }
     const reranked = e.rerank_score !== null && e.rerank_score !== undefined;
+    const isPdf = /\.pdf$/i.test(e.source_name) || e.content_type === 'pdf';
     const score = reranked ? (e.rerank_score as number) : e.score;
     return (
         <div className="flex h-full flex-col gap-3.5 p-5">
@@ -145,9 +147,14 @@ function EvidencePane({ e, n, onClose }: { e: Evidence | null; n: number | null;
             ) : (
                 <span className="w-fit rounded-full bg-bench px-2.5 py-1 text-xs font-semibold text-body">Match #{n} · keyword search</span>
             )}
-            <div className="flex-1 overflow-y-auto rounded-md bg-paper p-6">
-                <div className="rounded border-2 border-assay bg-lime-wash px-3 py-2 font-prose text-[15px] leading-6 text-ink">
-                    {e.snippet}
+            <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
+                {isPdf && e.locator.document_id && e.locator.page ? (
+                    <PageHighlight documentId={e.locator.document_id} page={e.locator.page} text={e.snippet} />
+                ) : null}
+                <div className="rounded-md bg-paper p-6">
+                    <div className="rounded border-2 border-assay bg-lime-wash px-3 py-2 font-prose text-[15px] leading-6 text-ink">
+                        {e.snippet}
+                    </div>
                 </div>
             </div>
             {e.type === 'web' && (

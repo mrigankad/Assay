@@ -97,7 +97,7 @@ async def _has_documents() -> bool:
         return True
     try:
         from src.infrastructure.vector_store import get_qdrant_store
-        return (await get_qdrant_store().count()) > 0
+        return (await get_qdrant_store().count_all_modes()) > 0
     except Exception:
         return True
 

@@ -60,3 +60,4 @@ litellm>=1.83
 fastembed>=0.7
 beautifulsoup4>=4.12
 lxml>=5.0
+pypdfium2>=4.30   # page images + text positions for highlighted citations (Apache/BSD)

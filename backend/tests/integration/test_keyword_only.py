@@ -39,3 +39,15 @@ async def test_embedding_service_reports_unavailable(monkeypatch):
 
     monkeypatch.setattr(router, "resolve", none)
     assert await EmbeddingService().available() is False
+
+
+@pytest.mark.asyncio
+async def test_documents_found_after_restart_in_keyword_mode(services):
+    """A fresh store (as after a restart) starts in dense mode but must still see keyword-only chunks."""
+    store = QdrantStore(collection="kwrestart")
+    enc = SparseEncoder()
+    await store.upsert([{"document_id": "d1", "content": "steel coil", "source": "a.pdf", "page": 1, "chunk_index": 0,
+                         "tenant_id": "default", "visibility": "public", "acl": ["public"]}], None, enc.encode_documents(["steel coil"]))
+    fresh = QdrantStore(collection="kwrestart")
+    assert fresh.keyword_only is False
+    assert await fresh.count_all_modes() == 1

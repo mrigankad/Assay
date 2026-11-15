@@ -222,6 +222,14 @@ class QdrantStore:
         res = await self.client.count(self.collection, count_filter=flt, exact=True)
         return res.count
 
+    async def count_all_modes(self) -> int:
+        """Chunks in the dense index plus the keyword-only index (whichever mode is active now)."""
+        total = 0
+        for name in (self._base_collection, f"{self._base_collection}_kw"):
+            if await self.client.collection_exists(name):
+                total += (await self.client.count(name, exact=True)).count
+        return total
+
     # ── Reads ───────────────────────────────────────────────────────────
 
     @staticmethod
