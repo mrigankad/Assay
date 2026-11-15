@@ -39,7 +39,7 @@ dev:
 	cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 dev-worker:
 	cd backend && python -m src.ingestion.worker
-# Zero-dependency run: SQLite + in-process Qdrant + inline ingestion (needs NVIDIA_API_KEY only)
+# Zero-dependency run: SQLite + in-process Qdrant + inline ingestion (any one model source)
 dev-local:
 	cd backend && USE_SQLITE=true QDRANT_MODE=path REDIS_ENABLED=false INGESTION_MODE=inline \
 		python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000

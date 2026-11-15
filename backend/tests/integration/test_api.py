@@ -17,7 +17,8 @@ async def _upload(client, headers, name="policy.md"):
 
 @pytest.mark.asyncio
 async def test_root_health_and_backends(client):
-    assert (await client.get("/")).json()["version"] == "2.0.0"
+    from main import APP_VERSION
+    assert (await client.get("/")).json()["version"] == APP_VERSION
     h = (await client.get("/health")).json()
     assert h["services"]["database"]["status"] == "healthy"
     assert h["services"]["knowledge"]["status"] == "healthy"

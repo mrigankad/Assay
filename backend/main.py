@@ -21,7 +21,7 @@ from src.core.logger import clear_request_context, generate_request_id, get_logg
 setup_logging(log_level=settings.log_level, json_logs=settings.is_production)
 logger = get_logger(__name__)
 
-APP_VERSION = "2.0.0"
+APP_VERSION = "0.1.0"
 
 
 @asynccontextmanager
