@@ -33,7 +33,7 @@ Each agent role (planner, search, experts, verifier, browser, vision, writer, em
 You need Python 3.12+, Node 20+ and one model source (an API key, a cloud login, or Ollama running locally).
 
 ```bash
-git clone https://github.com/mrigankad/Dexter-retrival-engine.git assay && cd assay
+git clone https://github.com/mrigankad/Assay.git assay && cd assay
 cp .env.example .env            # add a key, or skip this if Ollama / a cloud login is already set up
 
 cd backend
@@ -97,7 +97,7 @@ Full stack with Postgres, Redis, Qdrant and a worker: `cp .env.example .env && m
 
 ## Status
 
-Assay grew out of [Dexter](https://github.com/mrigankad/Dexter-retrival-engine) and the Bodham rebuild of it. Tested live: chat through the Claude Code CLI login and Ollama Cloud, keyword-only ingestion and answers, page highlighting, the matrix, and the full account flow. Covered by tests but not yet tried against a live service: the web agent (needs a search key) and SSO (needs an identity provider). Provider detection covers 73 providers and is unit-tested; most have not been called live.
+Assay was previously named Dexter (this repository, renamed) and grew out of the Bodham rebuild of it. Tested live: chat through the Claude Code CLI login and Ollama Cloud, keyword-only ingestion and answers, page highlighting, the matrix, and the full account flow. Covered by tests but not yet tried against a live service: the web agent (needs a search key) and SSO (needs an identity provider). Provider detection covers 73 providers and is unit-tested; most have not been called live.
 
 ## Licence
 

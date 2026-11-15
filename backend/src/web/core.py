@@ -20,7 +20,7 @@ from src.infrastructure.vector_store.sparse_encoder import tokenize
 
 logger = get_logger(__name__)
 
-USER_AGENT = "AssayResearchBot/1.0 (+https://github.com/mrigankad/Dexter-retrival-engine)"
+USER_AGENT = "AssayResearchBot/1.0 (+https://github.com/mrigankad/Assay)"
 SNAPSHOT_DIR = Path(os.getenv("ASSAY_WEB_SNAPSHOTS", Path.cwd() / "data" / "web_snapshots"))
 TIMEOUT = float(os.getenv("WEB_FETCH_TIMEOUT", "12"))
 MAX_PAGES = int(os.getenv("WEB_MAX_PAGES", "3"))
