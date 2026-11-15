@@ -111,6 +111,14 @@ class QdrantStore:
                 cfg = info.config.params.vectors
                 if isinstance(cfg, dict) and DENSE in cfg:
                     existing = cfg[DENSE].size
+                    if existing != self.vector_size and vector_size and not self.collection.endswith(f"_d{vector_size}"):
+                        # New embedding model with a different size: keep the old index intact
+                        # and write to a sibling collection sized for this model.
+                        logger.warning("Embedding size changed; using a per-dimension collection",
+                                       old=existing, new=vector_size)
+                        self.collection = f"{self.collection}_d{vector_size}"
+                        self.vector_size = vector_size
+                        return await self.ensure_collection(vector_size)
                     if existing != self.vector_size:
                         logger.warning(
                             "Collection dimension differs from configured; using collection's",

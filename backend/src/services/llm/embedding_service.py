@@ -25,39 +25,30 @@ class EmbeddingError(RuntimeError):
 
 
 class EmbeddingService:
-    _shared_client: Optional[httpx.AsyncClient] = None
+    """Embeddings from any provider (router role "embed"), with an LRU cache.
 
-    def __init__(
-        self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None,
-        dimensions: Optional[int] = None,
-    ):
-        self.api_key = api_key or settings.nvidia_api_key
-        self.base_url = base_url or settings.nvidia_base_url
-        self.model = model or settings.nvidia_embed_model
+    Model: ASSAY_EMBED_MODEL, else the best detected provider, else the
+    bundled offline ONNX model. Vector size follows the model.
+    """
+
+    def __init__(self, model: Optional[str] = None, dimensions: Optional[int] = None, **_legacy):
+        self.model = model
         self.dimensions = dimensions or settings.nvidia_embed_dimensions
-        self.timeout = settings.nvidia_timeout
         self.batch_size = settings.embedding_batch_size
         self._cache: "OrderedDict[str, List[float]]" = OrderedDict()
         self._cache_size = settings.embedding_cache_size
-
-    def _client(self) -> httpx.AsyncClient:
-        cls = type(self)
-        if cls._shared_client is None or cls._shared_client.is_closed:
-            cls._shared_client = httpx.AsyncClient(
-                base_url=self.base_url,
-                headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                timeout=httpx.Timeout(self.timeout, connect=10.0),
-            )
-        return cls._shared_client
+        self._base: Optional[str] = None
 
     @classmethod
     async def aclose(cls) -> None:
-        if cls._shared_client is not None and not cls._shared_client.is_closed:
-            await cls._shared_client.aclose()
-        cls._shared_client = None
+        return None
+
+    async def _target(self) -> str:
+        if self.model is None:
+            from src.providers.router import resolve
+            self.model, self._base = await resolve("embed")
+            logger.info("Embedding model selected", model=self.model)
+        return self.model
 
     @staticmethod
     def _key(text: str, input_type: str) -> str:
@@ -74,30 +65,25 @@ class EmbeddingService:
         if len(self._cache) > self._cache_size:
             self._cache.popitem(last=False)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=8),
-        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
-        reraise=True,
-    )
     async def _embed_batch(self, texts: List[str], input_type: str) -> List[List[float]]:
-        if not self.api_key:
-            raise EmbeddingError("NVIDIA_API_KEY is not configured")
-        payload = {
-            "model": self.model,
-            "input": texts,
-            "input_type": input_type,
-            "encoding_format": "float",
-            "truncate": "END",
-        }
+        model = await self._target()
+        from src.providers import builtin
+        if builtin.handles(model):
+            return await builtin.embed(model, texts)
+        import litellm
+        from src.providers.router import _kwargs
+        kw = _kwargs(model, self._base)
+        if model.split("/", 1)[0] in {"nvidia_nim", "cohere", "voyage", "jina_ai", "bedrock"}:
+            kw["input_type"] = {"cohere": "search_" + ("query" if input_type == "query" else "document")}.get(
+                model.split("/", 1)[0], input_type)
         if self.dimensions:
-            payload["dimensions"] = self.dimensions
-        response = await self._client().post("/embeddings", json=payload)
-        if response.status_code >= 400:
-            raise EmbeddingError(f"Embedding API error {response.status_code}: {response.text[:300]}")
-        data = response.json()["data"]
-        data.sort(key=lambda d: d.get("index", 0))
-        return [item["embedding"] for item in data]
+            kw["dimensions"] = self.dimensions
+        try:
+            resp = await litellm.aembedding(model=model, input=texts, **kw)
+        except Exception as exc:
+            raise EmbeddingError(f"{model}: {exc}") from exc
+        data = sorted(resp.data, key=lambda d: d.get("index", 0) if isinstance(d, dict) else 0)
+        return [d["embedding"] if isinstance(d, dict) else d.embedding for d in data]
 
     @log_timing("embed_texts")
     async def embed_texts(self, texts: List[str], input_type: str = "passage", batch_size: Optional[int] = None) -> List[List[float]]:

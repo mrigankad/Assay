@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 from src.contracts import Intent, PlanStep, QueryPlan
 from src.core.config import settings
 from src.core.logger import get_logger
-from src.services.llm.nvidia_llm_service import LLMUsage, NvidiaLLMService, get_llm_service
+from src.services.llm.llm_service import LLMUsage, LLMService, get_llm_service
 
 from .router import RouteDecision
 
@@ -38,12 +38,12 @@ Do not invent sub-questions the user did not ask."""
 
 
 class QueryPlanner:
-    def __init__(self, llm: Optional[NvidiaLLMService] = None, cache: Optional[Dict[str, Dict[str, Any]]] = None):
+    def __init__(self, llm: Optional[LLMService] = None, cache: Optional[Dict[str, Dict[str, Any]]] = None):
         self._llm = llm
         self._cache: Dict[str, Dict[str, Any]] = cache if cache is not None else {}
 
     @property
-    def llm(self) -> NvidiaLLMService:
+    def llm(self) -> LLMService:
         if self._llm is None:
             self._llm = get_llm_service()
         return self._llm

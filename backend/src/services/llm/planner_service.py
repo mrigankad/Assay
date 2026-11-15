@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from src.core.config import settings
 from src.core.logger import get_logger, log_timing
-from src.services.llm.nvidia_llm_service import NvidiaLLMService
+from src.services.llm.llm_service import LLMService
 
 logger = get_logger(__name__)
 
@@ -69,8 +69,8 @@ OUTPUT SCHEMA (JSON ONLY):
 class PlannerService:
     """Production Grade Planner Service."""
     
-    def __init__(self, llm_service: Optional[NvidiaLLMService] = None):
-        self.llm = llm_service or NvidiaLLMService()
+    def __init__(self, llm_service: Optional[LLMService] = None):
+        self.llm = llm_service or LLMService()
         
     def is_complex(self, query: str) -> bool:
         """Heuristic to check if query needs planning."""

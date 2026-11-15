@@ -22,7 +22,7 @@ from src.core.config import settings
 from src.core.logger import get_logger
 from src.core.telemetry import set_span_attributes, trace_span
 from src.knowledge import KnowledgeAdapter, get_knowledge_adapter
-from src.services.llm.nvidia_llm_service import LLMUsage, NvidiaLLMService, get_llm_service
+from src.services.llm.llm_service import LLMUsage, LLMService, get_llm_service
 
 from .executor import ExecutionResult, PlanExecutor
 from .planner import QueryPlanner
@@ -35,7 +35,7 @@ logger = get_logger(__name__)
 class RetrievalEngine:
     def __init__(
         self,
-        llm: Optional[NvidiaLLMService] = None,
+        llm: Optional[LLMService] = None,
         adapter: Optional[KnowledgeAdapter] = None,
         router: Optional[QueryRouter] = None,
         planner: Optional[QueryPlanner] = None,
@@ -53,7 +53,7 @@ class RetrievalEngine:
         self._guardrails = None
 
     @property
-    def llm(self) -> NvidiaLLMService:
+    def llm(self) -> LLMService:
         if self._llm is None:
             self._llm = get_llm_service()
         return self._llm

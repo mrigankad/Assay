@@ -117,8 +117,8 @@ class DynamicExpertAgent(Agent):
         start_time = time.time()
 
         try:
-            from src.services.llm.nvidia_llm_service import NvidiaLLMService
-            llm_service = NvidiaLLMService()
+            from src.services.llm.llm_service import LLMService
+            llm_service = LLMService(role="expert")
 
             prompt = self._create_expertise_prompt(domain_question, context)
 

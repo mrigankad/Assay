@@ -131,7 +131,7 @@ class Settings(BaseSettings):
     qdrant_api_key: Optional[str] = Field(default=None)
     qdrant_path: str = Field(default="./data/qdrant")
     qdrant_collection: str = Field(default="documents")
-    qdrant_vector_size: int = Field(default=2048, description="Dense embedding dimension of NVIDIA_EMBED_MODEL")
+    qdrant_vector_size: int = Field(default=384, description="Initial dense size; Assay adapts to the embedding model and keeps one collection per size")
     qdrant_sparse_enabled: bool = Field(default=True, description="Index BM25-style sparse vectors for hybrid search")
     qdrant_on_disk: bool = Field(default=False)
 
@@ -229,8 +229,8 @@ class Settings(BaseSettings):
     hybrid_search_enabled: bool = Field(default=True)
     rrf_k: int = Field(default=60)
     enable_reranking: bool = Field(default=True)
-    reranker_backend: Literal["nvidia", "local", "none"] = Field(
-        default="nvidia", description="nvidia = NIM /reranking API; local = sentence-transformers CrossEncoder; none = fusion order"
+    reranker_backend: Literal["auto", "nvidia", "local", "none"] = Field(
+        default="auto", description="auto = best detected rerank provider, else bundled ONNX; nvidia = NIM; local = sentence-transformers; none = fusion order"
     )
     local_reranker_model: str = Field(default="BAAI/bge-reranker-v2-m3")
     multi_query_enabled: bool = Field(default=True, description="Generate alternate phrasings for complex queries")

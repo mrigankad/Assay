@@ -2,38 +2,52 @@
 
 /* Custom theme configuration for Tailwind v4 */
 @theme {
-  /* Colors */
-  --color-primary-50: #f0fdf4;
-  --color-primary-100: #dcfce7;
-  --color-primary-200: #bbf7d0;
-  --color-primary-300: #86efac;
-  --color-primary-400: #4ade80;
-  --color-primary-500: #22c55e;
-  --color-primary-600: #16a34a;
-  --color-primary-700: #15803d;
-  --color-primary-800: #166534;
-  --color-primary-900: #14532d;
-  --color-primary-950: #052e16;
+  /* Assay palette: ink, lime (fills only), assay green (text), bench */
+  --color-ink: #0E1510;
+  --color-body: #56605A;
+  --color-muted: #8A948C;
+  --color-rule: #E4E8E0;
+  --color-bench: #F5F7F2;
+  --color-paper: #FFFFFF;
+  --color-lime: #C6F432;
+  --color-lime-wash: #E3F9A6;
+  --color-assay: #137A3F;
+  --color-assay-wash: #EAF3E3;
+  --color-dropped: #D9422F;
+  --color-conflict: #B07A00;
 
-  /* NVIDIA Green accent */
-  --color-nvidia: #76b900;
-  --color-nvidia-dark: #5a8f00;
+  /* Legacy scales remapped so older screens inherit the brand */
+  --color-primary-50: #f3faeb;
+  --color-primary-100: #eaf3e3;
+  --color-primary-200: #d3ebc2;
+  --color-primary-300: #a9d98a;
+  --color-primary-400: #5fb36a;
+  --color-primary-500: #1f9150;
+  --color-primary-600: #137a3f;
+  --color-primary-700: #0f6232;
+  --color-primary-800: #0d4d28;
+  --color-primary-900: #0b3d20;
+  --color-primary-950: #062613;
+  --color-nvidia: #C6F432;
+  --color-nvidia-dark: #137A3F;
 
-  /* Dark theme colors */
-  --color-dark-50: #f8fafc;
-  --color-dark-100: #f1f5f9;
-  --color-dark-200: #e2e8f0;
-  --color-dark-300: #cbd5e1;
-  --color-dark-400: #94a3b8;
-  --color-dark-500: #64748b;
-  --color-dark-600: #475569;
-  --color-dark-700: #334155;
-  --color-dark-800: #1e293b;
-  --color-dark-900: #0f172a;
-  --color-dark-950: #020617;
+  /* dark-* was a dark slate theme; inverted onto Assay's light ground */
+  --color-dark-50: #0E1510;
+  --color-dark-100: #1A241D;
+  --color-dark-200: #2B332D;
+  --color-dark-300: #3E4640;
+  --color-dark-400: #56605A;
+  --color-dark-500: #7B847D;
+  --color-dark-600: #B7BEB3;
+  --color-dark-700: #E4E8E0;
+  --color-dark-800: #EEF1EA;
+  --color-dark-900: #F5F7F2;
+  --color-dark-950: #FFFFFF;
 
   /* Fonts */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-display: 'Funnel Display', 'Geist', system-ui, sans-serif;
+  --font-prose: 'Newsreader', Georgia, serif;
 
   /* Animations */
   --animate-fade-in: fade-in 0.3s ease-out;
@@ -66,11 +80,11 @@
 
     0%,
     100% {
-      box-shadow: 0 0 20px rgba(118, 185, 0, 0.3);
+      box-shadow: 0 0 20px rgba(198, 244, 50, 0.3);
     }
 
     50% {
-      box-shadow: 0 0 40px rgba(118, 185, 0, 0.5);
+      box-shadow: 0 0 40px rgba(198, 244, 50, 0.5);
     }
   }
 }
@@ -82,7 +96,7 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  background: #FFFFFF;
   min-height: 100vh;
 }
 
@@ -93,29 +107,29 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #F5F7F2;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #C9D0C4;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #8A948C;
 }
 
 /* Code blocks */
 pre {
-  background: #0f172a !important;
+  background: #F5F7F2 !important;
   border-radius: 8px;
   padding: 1rem;
   overflow-x: auto;
 }
 
 code {
-  font-family: 'Fira Code', 'Consolas', monospace;
+  font-family: 'Geist Mono', ui-monospace, monospace;
   font-size: 0.875rem;
 }
 
@@ -123,34 +137,34 @@ code {
 .prose-invert h1,
 .prose-invert h2,
 .prose-invert h3 {
-  color: #f1f5f9;
+  color: #0E1510;
   font-weight: 600;
 }
 
 .prose-invert p {
-  color: #cbd5e1;
+  color: #2B332D;
   line-height: 1.7;
 }
 
 .prose-invert ul,
 .prose-invert ol {
-  color: #cbd5e1;
+  color: #2B332D;
 }
 
 .prose-invert strong {
-  color: #76b900;
+  color: #137A3F;
 }
 
 /* Glass effect */
 .glass {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(71, 85, 105, 0.3);
+  border: 1px solid #E4E8E0;
 }
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #76b900 0%, #22c55e 100%);
+  background: linear-gradient(135deg, #C6F432 0%, #C6F432 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -195,21 +209,21 @@ code {
 
 /* File drop zone */
 .dropzone-active {
-  border-color: #76b900;
-  background: rgba(118, 185, 0, 0.1);
+  border-color: #137A3F;
+  background: rgba(198, 244, 50, 0.1);
 }
 
 /* Source citation badge */
 .source-badge {
-  background: linear-gradient(135deg, rgba(118, 185, 0, 0.2) 0%, rgba(34, 197, 94, 0.2) 100%);
-  border: 1px solid rgba(118, 185, 0, 0.3);
+  background: linear-gradient(135deg, rgba(198, 244, 50, 0.2) 0%, rgba(198, 244, 50, 0.2) 100%);
+  border: 1px solid rgba(198, 244, 50, 0.3);
 }
 
 /* Enhanced Markdown Content Styling */
 .markdown-content {
   font-size: 0.9375rem;
   line-height: 1.7;
-  color: #e2e8f0;
+  color: #2B332D;
 }
 
 .markdown-content>*:first-child {
@@ -242,26 +256,26 @@ code {
 }
 
 .markdown-content table th {
-  background: rgba(118, 185, 0, 0.1);
+  background: rgba(198, 244, 50, 0.1);
 }
 
 .markdown-content table tr:nth-child(even) td {
-  background: rgba(15, 23, 42, 0.3);
+  background: #F5F7F2;
 }
 
 .markdown-content table tr:hover td {
-  background: rgba(118, 185, 0, 0.05);
+  background: rgba(198, 244, 50, 0.05);
 }
 
 /* Code block enhancements */
 .markdown-content pre {
   margin: 1rem 0;
-  background: #0f172a !important;
-  border: 1px solid #334155;
+  background: #F5F7F2 !important;
+  border: 1px solid #E4E8E0;
 }
 
 .markdown-content code {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: 'JetBrains Mono', 'Geist Mono', ui-monospace, monospace;
 }
 
 /* Link hover effects */
@@ -270,7 +284,7 @@ code {
 }
 
 .markdown-content a:hover {
-  text-shadow: 0 0 8px rgba(118, 185, 0, 0.3);
+  text-shadow: 0 0 8px rgba(198, 244, 50, 0.3);
 }
 
 /* Smooth transitions */
@@ -280,7 +294,7 @@ code {
 
 /* Selection styling */
 .markdown-content ::selection {
-  background: rgba(118, 185, 0, 0.3);
+  background: rgba(198, 244, 50, 0.3);
   color: white;
 }
 
@@ -303,8 +317,8 @@ code {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(118, 185, 0, 0.2);
-  color: #76b900;
+  background: rgba(198, 244, 50, 0.2);
+  color: #137A3F;
   border-radius: 50%;
   font-size: 0.75rem;
   font-weight: 600;
@@ -324,7 +338,7 @@ code {
    ═══════════════════════════════════════════════ */
 .streaming-cursor {
   font-weight: 600;
-  color: #76b900;
+  color: #137A3F;
   animation: cursor-blink 0.8s step-end infinite;
 }
 
@@ -416,6 +430,9 @@ code {
    Keyboard shortcut pills
    ═══════════════════════════════════════════════ */
 kbd {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: 'JetBrains Mono', 'Geist Mono', ui-monospace, monospace;
   font-size: 0.6rem;
 }
+/* Assay type roles */
+.font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
+.font-prose { font-family: var(--font-prose); }

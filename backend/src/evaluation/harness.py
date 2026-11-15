@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 from src.contracts import RetrievalRequest, RetrievedChunk
 from src.core.logger import get_logger
 from src.knowledge import get_knowledge_adapter
-from src.services.llm.nvidia_llm_service import NvidiaLLMService, extract_json, get_llm_service
+from src.services.llm.llm_service import LLMService, extract_json, get_llm_service
 
 logger = get_logger(__name__)
 
@@ -106,13 +106,13 @@ Return ONLY JSON: {{"faithfulness": 0-1 (fraction of answer claims supported by 
 
 
 class EvalHarness:
-    def __init__(self, backend: Optional[str] = None, llm: Optional[NvidiaLLMService] = None, engine=None):
+    def __init__(self, backend: Optional[str] = None, llm: Optional[LLMService] = None, engine=None):
         self.adapter = get_knowledge_adapter(backend)
         self._llm = llm
         self._engine = engine
 
     @property
-    def llm(self) -> NvidiaLLMService:
+    def llm(self) -> LLMService:
         if self._llm is None:
             self._llm = get_llm_service()
         return self._llm

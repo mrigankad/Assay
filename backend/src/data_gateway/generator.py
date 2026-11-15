@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from src.core.logger import get_logger
-from src.services.llm.nvidia_llm_service import LLMUsage, NvidiaLLMService, get_llm_service
+from src.services.llm.llm_service import LLMUsage, LLMService, get_llm_service
 
 logger = get_logger(__name__)
 
@@ -32,11 +32,11 @@ Question: {question}
 
 
 class SqlGenerator:
-    def __init__(self, llm: Optional[NvidiaLLMService] = None):
+    def __init__(self, llm: Optional[LLMService] = None):
         self._llm = llm
 
     @property
-    def llm(self) -> NvidiaLLMService:
+    def llm(self) -> LLMService:
         if self._llm is None:
             self._llm = get_llm_service()
         return self._llm

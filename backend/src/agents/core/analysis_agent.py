@@ -83,9 +83,9 @@ class AnalysisAgent(Agent):
 
         try:
             # Import locally to avoid circular dependencies
-            from src.services.llm.nvidia_llm_service import NvidiaLLMService
+            from src.services.llm.llm_service import LLMService
 
-            llm_service = NvidiaLLMService()
+            llm_service = LLMService(role="expert")
 
             # Prepare documents for analysis
             doc_text = self._prepare_documents(documents)

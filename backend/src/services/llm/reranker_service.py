@@ -104,8 +104,10 @@ class RerankerService:
         try:
             if self.backend == "local":
                 scored = await self._rerank_local(query, documents)
-            else:
+            elif self.backend == "nvidia":
                 scored = await self._rerank_nvidia(query, documents)
+            else:
+                scored = await self._rerank_provider(query, documents)
         except Exception as exc:
             logger.warning("Reranking failed; keeping fusion order", backend=self.backend, error=str(exc))
             return [(i, d, 0.0) for i, d in enumerate(documents[:top_k])]

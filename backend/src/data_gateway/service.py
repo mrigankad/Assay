@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from src.contracts import Evidence, EvidenceLocator
 from src.core.config import settings
 from src.core.logger import get_logger
-from src.services.llm.nvidia_llm_service import LLMUsage
+from src.services.llm.llm_service import LLMUsage
 
 from .charts import rows_to_markdown, suggest_chart, validate_chart_spec
 from .connections import DataConnectionManager, get_connection_manager

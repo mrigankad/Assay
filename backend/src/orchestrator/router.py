@@ -14,7 +14,7 @@ from typing import List, Optional
 
 from src.contracts import Intent
 from src.core.logger import get_logger
-from src.services.llm.nvidia_llm_service import LLMUsage, NvidiaLLMService, get_llm_service
+from src.services.llm.llm_service import LLMUsage, LLMService, get_llm_service
 
 logger = get_logger(__name__)
 
@@ -90,12 +90,12 @@ Message: {query}"""
 
 
 class QueryRouter:
-    def __init__(self, llm: Optional[NvidiaLLMService] = None, use_llm: bool = True):
+    def __init__(self, llm: Optional[LLMService] = None, use_llm: bool = True):
         self._llm = llm
         self.use_llm = use_llm
 
     @property
-    def llm(self) -> NvidiaLLMService:
+    def llm(self) -> LLMService:
         if self._llm is None:
             self._llm = get_llm_service()
         return self._llm

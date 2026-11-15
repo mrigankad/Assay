@@ -47,6 +47,15 @@ async def _check_knowledge() -> Dict[str, Any]:
         return {"status": "unhealthy", "latency_ms": None, "error": str(exc)[:200]}
 
 
+async def _llm_configured() -> bool:
+    from src.providers import router as prov
+    try:
+        await prov.resolve("synthesis")
+        return True
+    except RuntimeError:
+        return False
+
+
 @router.get("/health")
 async def health_check():
     services = {"database": await _check_db(), "redis": await _check_redis(), "knowledge": await _check_knowledge()}
@@ -60,7 +69,7 @@ async def health_check():
         "version": "2.0.0",
         "environment": settings.app_env,
         "knowledge_backend": settings.knowledge_backend,
-        "llm_configured": settings.has_nvidia_key,
+        "llm_configured": await _llm_configured(),
         "services": services,
     }
 

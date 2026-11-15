@@ -94,9 +94,9 @@ class SynthesisAgent(Agent):
 
         try:
             # Import locally to avoid circular dependencies
-            from src.services.llm.nvidia_llm_service import NvidiaLLMService
+            from src.services.llm.llm_service import LLMService
 
-            llm_service = NvidiaLLMService()
+            llm_service = LLMService(role="synthesis")
 
             # Prepare synthesis context
             synthesis_context = self._prepare_synthesis_context(

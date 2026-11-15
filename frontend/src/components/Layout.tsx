@@ -1,169 +1,102 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
-import {
-    ChatBubbleLeftRightIcon,
-    DocumentTextIcon,
-    ArrowRightOnRectangleIcon,
-    Bars3Icon,
-    ShieldCheckIcon,
-    SparklesIcon
-} from '@heroicons/react/24/outline';
-import { useState, useEffect } from 'react';
-import { healthService } from '@/services';
+import { useEffect, useState } from 'react';
 import clsx from 'clsx';
+import { useAuthStore } from '@/stores/authStore';
+import { healthService } from '@/services';
+import { Icon } from '@/components/Icon';
+
+function AssayMark({ className = 'h-[26px] w-[26px]' }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 32 32" className={className} aria-hidden>
+            <path d="M16 3 L28 26 H4 Z" fill="#0E1510" />
+            <rect x="7" y="17" width="18" height="4" rx="1" fill="#C6F432" />
+        </svg>
+    );
+}
+
+const NAV = [
+    { to: '/', icon: 'ask', label: 'Ask', end: true },
+    { to: '/documents', icon: 'document', label: 'Documents' },
+    { to: '/models', icon: 'models', label: 'Models' },
+];
 
 export function Layout() {
     const { isAuthenticated, user, logout } = useAuthStore();
     const navigate = useNavigate();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [healthStatus, setHealthStatus] = useState<'healthy' | 'unhealthy' | 'loading'>('loading');
+    const [open, setOpen] = useState(false);
+    const [health, setHealth] = useState<'healthy' | 'unhealthy' | 'loading'>('loading');
 
     useEffect(() => {
-        // Check health on mount
-        healthService.check()
-            .then(() => setHealthStatus('healthy'))
-            .catch(() => setHealthStatus('unhealthy'));
+        healthService.check().then(() => setHealth('healthy')).catch(() => setHealth('unhealthy'));
     }, []);
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
-
-    const navItems = [
-        { to: '/', icon: ChatBubbleLeftRightIcon, label: 'Chat' },
-        { to: '/documents', icon: DocumentTextIcon, label: 'Documents' },
-    ];
-
     return (
-        <div className="flex h-screen bg-dark-950">
-            {/* Mobile sidebar backdrop */}
-            {isSidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                />
-            )}
+        <div className="flex h-screen bg-paper text-ink">
+            {open && <div className="fixed inset-0 z-40 bg-ink/30 lg:hidden" onClick={() => setOpen(false)} />}
 
-            {/* Sidebar */}
             <aside className={clsx(
-                "fixed lg:static inset-y-0 left-0 z-50 w-64 glass flex flex-col transform transition-transform duration-300 ease-in-out",
-                isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                'fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col gap-[22px] border-r border-rule bg-bench px-3.5 py-5 transition-transform duration-300 lg:static',
+                open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
             )}>
-                {/* Logo */}
-                <div className="p-6 border-b border-dark-700">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-nvidia to-primary-500 flex items-center justify-center">
-                            <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                            </svg>
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-lg font-bold text-white leading-none">RAG PRO</h1>
-                                <span className="px-1.5 py-0.5 rounded bg-nvidia text-[8px] font-black text-white uppercase tracking-tighter">
-                                    Enterprise
-                                </span>
-                            </div>
-                            <p className="text-[10px] text-dark-400 mt-1 uppercase tracking-widest font-semibold italic">NVIDIA NIM CORE</p>
-                        </div>
-                    </div>
+                <div className="flex items-center gap-2.5 px-1.5">
+                    <AssayMark />
+                    <span className="font-display text-[22px] font-extrabold tracking-[-0.03em]">assay</span>
                 </div>
 
-                {/* Navigation */}
-                <nav className="flex-1 p-4 space-y-2">
-                    {navItems.map((item) => (
-                        <NavLink
-                            key={item.to}
-                            to={item.to}
-                            onClick={() => setIsSidebarOpen(false)}
-                            className={({ isActive }: { isActive: boolean }) => clsx(
-                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                                isActive
-                                    ? "bg-nvidia/20 text-nvidia border border-nvidia/30"
-                                    : "text-dark-300 hover:bg-dark-800 hover:text-white"
-                            )}
-                        >
-                            <item.icon className="w-5 h-5" />
-                            <span className="font-medium">{item.label}</span>
+                <button onClick={() => { navigate('/'); setOpen(false); }}
+                    className="flex h-[38px] items-center gap-2 rounded-[10px] bg-ink px-3 text-sm font-medium text-white">
+                    <Icon name="plus" className="h-4 w-4 text-lime" strokeWidth={2} />
+                    <span className="flex-1 text-left">New question</span>
+                </button>
+
+                <nav className="flex flex-col gap-0.5">
+                    {NAV.map((n) => (
+                        <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setOpen(false)}
+                            className={({ isActive }) => clsx(
+                                'flex h-[34px] items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors',
+                                isActive ? 'border border-rule bg-paper font-semibold text-ink' : 'text-dark-200 hover:bg-paper/70',
+                            )}>
+                            {({ isActive }) => (<>
+                                <Icon name={n.icon} className={clsx('h-[18px] w-[18px]', isActive ? 'text-assay' : 'text-body')} />
+                                {n.label}
+                            </>)}
                         </NavLink>
                     ))}
                 </nav>
 
-                {/* Status & User */}
-                <div className="p-4 border-t border-dark-700 space-y-4">
-                    {/* Health Status */}
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-dark-800">
-                        <div className={clsx(
-                            "w-2 h-2 rounded-full",
-                            healthStatus === 'healthy' && "bg-green-500 animate-pulse",
-                            healthStatus === 'unhealthy' && "bg-red-500",
-                            healthStatus === 'loading' && "bg-yellow-500 animate-pulse"
-                        )} />
-                        <span className="text-sm text-dark-400">
-                            {healthStatus === 'healthy' && 'System Online'}
-                            {healthStatus === 'unhealthy' && 'System Offline'}
-                            {healthStatus === 'loading' && 'Checking...'}
-                        </span>
-                    </div>
+                <div className="flex-1" />
 
-                    {/* Capabilities */}
-                    <div className="px-4 py-3 rounded-lg bg-nvidia/5 border border-nvidia/10 space-y-2">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-dark-400 uppercase tracking-wider">Capabilities</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <ShieldCheckIcon className="w-3.5 h-3.5 text-nvidia" />
-                            <span className="text-xs text-dark-200">Guardrails Active</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <SparklesIcon className="w-3.5 h-3.5 text-nvidia" />
-                            <span className="text-xs text-dark-200">Multimodal RAG</span>
-                        </div>
-                    </div>
-
-                    {/* User Info */}
-                    {isAuthenticated && user && (
-                        <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-dark-800">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-nvidia to-primary-500 flex items-center justify-center text-white font-bold text-sm">
-                                    {user.username.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-white">{user.username}</p>
-                                    <p className="text-xs text-dark-400">{user.email}</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleLogout}
-                                className="p-2 text-dark-400 hover:text-red-400 transition-colors"
-                                title="Logout"
-                            >
-                                <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                            </button>
-                        </div>
-                    )}
+                <div className="flex items-center gap-2 px-2.5 text-xs text-body">
+                    <span className={clsx('h-2 w-2 rounded-full',
+                        health === 'healthy' && 'bg-assay', health === 'unhealthy' && 'bg-dropped', health === 'loading' && 'bg-conflict')} />
+                    {health === 'healthy' ? 'Engine online' : health === 'unhealthy' ? 'Engine offline' : 'Checking…'}
                 </div>
+
+                {isAuthenticated && user && (
+                    <div className="flex items-center gap-2.5 rounded-xl border border-rule bg-paper p-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink text-sm font-bold text-lime">
+                            {user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-semibold">{user.username}</p>
+                            <p className="truncate text-xs text-body">{user.email}</p>
+                        </div>
+                        <button onClick={() => { logout(); navigate('/login'); }} title="Sign out" className="p-1 text-body hover:text-dropped">
+                            <Icon name="logout" className="h-[18px] w-[18px]" />
+                        </button>
+                    </div>
+                )}
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col min-w-0">
-                {/* Mobile Header */}
-                <header className="lg:hidden flex items-center justify-between p-4 border-b border-dark-700 glass">
-                    <button
-                        onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 text-dark-300 hover:text-white"
-                    >
-                        <Bars3Icon className="w-6 h-6" />
+            <main className="flex min-w-0 flex-1 flex-col">
+                <header className="flex items-center justify-between border-b border-rule px-4 py-3 lg:hidden">
+                    <button onClick={() => setOpen(true)} className="p-1.5 text-ink" aria-label="Open menu">
+                        <Icon name="menu" className="h-6 w-6" />
                     </button>
-                    <h1 className="text-lg font-bold gradient-text">Assay</h1>
-                    <div className="w-10" /> {/* Spacer */}
+                    <span className="flex items-center gap-2 font-display text-lg font-extrabold"><AssayMark className="h-5 w-5" />assay</span>
+                    <span className="w-9" />
                 </header>
-
-                {/* Page Content */}
-                <div className="flex-1 overflow-hidden">
-                    <Outlet />
-                </div>
+                <div className="flex-1 overflow-hidden"><Outlet /></div>
             </main>
         </div>
     );

@@ -156,7 +156,7 @@ class IngestionPipeline:
             try:
                 from src.services.llm.graph_extraction_service import GraphExtractionService
                 from src.services.llm.knowledge_graph_service import KnowledgeGraphService
-                from src.services.llm.nvidia_llm_service import get_llm_service
+                from src.services.llm.llm_service import get_llm_service
                 graph = KnowledgeGraphService()
                 extractor = GraphExtractionService(llm_service=get_llm_service())
                 total = 0

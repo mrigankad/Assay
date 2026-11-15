@@ -46,7 +46,7 @@ class HybridRetriever:
     @property
     def llm(self):
         if self._llm is None:
-            from src.services.llm.nvidia_llm_service import get_llm_service
+            from src.services.llm.llm_service import get_llm_service
             self._llm = get_llm_service()
         return self._llm
 

@@ -83,9 +83,9 @@ class VerificationAgent(Agent):
 
         try:
             # Import locally to avoid circular dependencies
-            from src.services.llm.nvidia_llm_service import NvidiaLLMService
+            from src.services.llm.llm_service import LLMService
 
-            llm_service = NvidiaLLMService()
+            llm_service = LLMService(role="verifier")
 
             # Prepare verification prompt
             doc_text = self._prepare_documents(documents)
