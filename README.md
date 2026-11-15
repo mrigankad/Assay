@@ -4,7 +4,7 @@
 
 Assay is an open-source research engine for long documents. Ask it a hard question about a 400-page filing, a stack of contracts or a tender, and it plans the search, reads the evidence, checks each sentence of its answer against the page it came from, and drops anything it can't support. It runs on your machine or your cloud, with whichever models you already have.
 
-<p align="center"><img src="docs/readme/ui-ask.png" alt="An answer with a verified claim highlighted and the source clause boxed on the PDF page" width="100%"/></p>
+<p align="center"><img src="docs/readme/ui-ask.png" alt="An answer with numbered citations; the cited passage boxed on the real PDF page" width="100%"/></p>
 
 ## Why it exists
 
@@ -61,17 +61,39 @@ Full stack with Postgres, Redis, Qdrant and a worker: `cp .env.example .env && m
 | **Interop** | Assay is an MCP server at `/mcp`, and can use any MCP knowledge server (including Azure AI Search / Foundry IQ) as its backend. |
 | **Ops** | OpenTelemetry traces, per-answer token and cost accounting, an offline eval harness, Docker Compose. |
 
+## Features
+
+**Cited on the page.** Click a citation and the real PDF page opens with the quoted lines boxed. Works for documents indexed before the feature existed.
+
+**Matrix.** Ask the same questions of every document. Each cell shows the answer, the page, and whether the model's quote was found in the source.
+
+<p align="center"><img src="docs/readme/ui-matrix.png" alt="Matrix: three documents by three questions, with pages and not-found cells" width="100%"/></p>
+
+**Web research (opt-in).** `WEB_MODE=ask` adds a "Search the web" toggle; `auto` lets the planner decide. Works with Tavily, Brave, Exa or your own SearXNG, respects robots.txt and domain allow/block lists, and saves a snapshot of every page it cites.
+
+**Sign-in.** The first account becomes admin; after that, sign-up is closed unless `ALLOW_SIGNUP=true`. Any OpenID Connect provider (Entra ID, Okta, Google, Keycloak, Auth0) works through `OIDC_ISSUER` and `OIDC_CLIENT_ID`, with PKCE and optional `SSO_ALLOWED_DOMAINS`.
+
+**Audit log and evals.** Every answer keeps its plan, sources, model, tokens and timing, exportable as JSON. Admins can run named eval datasets and compare saved runs.
+
+**No machine learning on your laptop if you don't want it.** `ASSAY_LOCAL_COMPUTE=0` keeps every model call remote (API keys, Ollama Cloud, or the Claude Code / Codex / Gemini CLI logins). With no embedding model available, Assay falls back to keyword (BM25) search, so it still works with only a chat model.
+
+**Phones.** Every screen works at phone width; evidence opens as a bottom sheet.
+
+<p align="center"><img src="docs/readme/ui-phone.png" alt="Ask, evidence sheet, audit detail and matrix on a phone" width="100%"/></p>
+
 ## API
 
 - `GET /api/providers` · what was detected · `?refresh=true` to rescan
 - `GET /api/providers/roles` · the model each role uses right now
 - `POST /api/providers/test` · `{"role": "verifier"}` sends a one-word prompt and reports latency
-- `POST /api/chat` · SSE stream of `progress`, `evidence`, `answer_delta`, `done`
+- `POST /api/chat` · SSE stream of `progress`, `evidence`, `answer_delta`, `done`; `"use_web": true` to include the web
+- `GET /api/documents/{id}/pages/{n}.png` and `POST .../locate` · the page image and the boxes for a passage
+- `GET /api/auth/methods` · password and SSO options for the sign-in page
 - Swagger at `/docs`
 
 ## Status
 
-Assay grew out of [Dexter](https://github.com/mrigankad/Dexter-retrival-engine) and the Bodham rebuild of it. Working today: everything in the table above, and the provider layer across all 73 providers (detection is unit-tested; live calls verified through the Claude Code CLI login and Ollama Cloud). In progress: page-region (bounding-box) citations in the UI, the claim-by-claim verifier view, the browser agent, the eval dashboard and model comparison.
+Assay grew out of [Dexter](https://github.com/mrigankad/Dexter-retrival-engine) and the Bodham rebuild of it. Tested live: chat through the Claude Code CLI login and Ollama Cloud, keyword-only ingestion and answers, page highlighting, the matrix, and the full account flow. Covered by tests but not yet tried against a live service: the web agent (needs a search key) and SSO (needs an identity provider). Provider detection covers 73 providers and is unit-tested; most have not been called live.
 
 ## Licence
 

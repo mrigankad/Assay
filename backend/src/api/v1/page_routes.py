@@ -70,7 +70,8 @@ def _phrases(text: str) -> List[str]:
         p = p.strip(" -•*#|")
         if len(p) < 18:
             continue
-        p = p[:90]                      # long sentences: the start is enough to find the line
+        if len(p) > 90:                 # long sentences: the start is enough to find the line
+            p = p[:90].rsplit(" ", 1)[0]    # cut at a word, so a box never ends mid-word
         if p.lower() not in seen:
             seen.add(p.lower())
             out.append(p)
