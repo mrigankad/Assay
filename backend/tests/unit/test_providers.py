@@ -149,3 +149,15 @@ async def test_cli_backend_refuses_without_opt_in(monkeypatch):
     monkeypatch.delenv("ASSAY_ENABLE_CLAUDE_CODE", raising=False)
     with pytest.raises(PermissionError):
         await cli_backends.complete("claude_code/", [{"role": "user", "content": "hi"}])
+
+
+@pytest.mark.asyncio
+async def test_blocked_provider_never_used(monkeypatch, tmp_path):
+    for v in ("ASSAY_MODEL", "ASSAY_MODEL_SYNTHESIS"):
+        monkeypatch.delenv(v, raising=False)
+    monkeypatch.setattr(router, "PREFS_PATH", str(tmp_path / "prefs.json"))
+    router.save_prefs({"default": "anthropic/claude-sonnet-4-5", "blocked": ["anthropic", "not-a-provider"]})
+    assert router.load_prefs()["blocked"] == ["anthropic"]
+    _set_detected([_d("anthropic"), _d("ollama", ["gpt-oss:20b-cloud"], "http://h:11434")])
+    model, _ = await router.resolve("synthesis")
+    assert model == "ollama_chat/gpt-oss:20b-cloud"      # explicit default and auto both skip the blocked provider

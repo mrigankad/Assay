@@ -73,6 +73,25 @@ async def test(req: TestRequest):
 class Preferences(BaseModel):
     default: Optional[str] = None
     roles: dict[str, str] = {}
+    blocked: list[str] = []
+
+
+@router.get("/runtime")
+async def runtime():
+    """Read-only facts the Settings screen shows (most are set by env at deploy time)."""
+    import os
+    from src.core.config import settings
+    from src.providers.detection import local_compute_allowed
+    return {
+        "local_compute": local_compute_allowed(),
+        "scan_local": os.getenv("ASSAY_SCAN_LOCAL", "1") != "0",
+        "enabled_clis": [c for c in ("claude_code", "codex_cli", "gemini_cli") if os.getenv(f"ASSAY_ENABLE_{c.upper()}") == "1"],
+        "blocked": sorted(prov.blocked_providers()),
+        "default_visibility": settings.default_document_visibility,
+        "acl_enforcement": settings.acl_enforcement,
+        "auth_mode": settings.auth_mode,
+        "knowledge_backend": settings.knowledge_backend,
+    }
 
 
 @router.get("/preferences")
@@ -83,10 +102,15 @@ async def get_preferences():
 @router.put("/preferences")
 async def put_preferences(p: Preferences, admin: AdminUser):
     """Save the model choice from the setup or Models screen. Applies to new questions."""
+    unknown = [b for b in p.blocked if b not in {x.id for x in PROVIDERS}]
+    if unknown:
+        raise HTTPException(status_code=422, detail=f"Unknown providers: {', '.join(unknown)}")
     for model in [p.default, *p.roles.values()]:
         if model and "/" not in model:
             raise HTTPException(status_code=422, detail=f"'{model}' is not a provider/model string")
     saved = prov.save_prefs(p.model_dump())
     from src.services.llm.llm_service import set_llm_service
     set_llm_service(None)          # next request resolves models again
+    from src.services.llm.embedding_service import set_embedding_service
+    set_embedding_service(None)
     return saved

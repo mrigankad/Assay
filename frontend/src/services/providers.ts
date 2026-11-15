@@ -67,3 +67,28 @@ export function providerIdFromModel(model: string | null | undefined): string | 
     };
     return map[prefix] ?? prefix;
 }
+
+export interface TraceSummary {
+    trace_id: string; session_id?: string; user_id?: string; query: string; intent?: string;
+    confidence?: string; total_latency_ms?: number; evidence_count?: number;
+    prompt_tokens?: number; completion_tokens?: number; created_at?: string; model?: string;
+}
+
+export interface TraceDetail extends TraceSummary {
+    model?: string;
+    plan?: { query_type?: string; reasoning?: string; synthesis_strategy?: string;
+        steps?: { id: string; tool: string; goal: string; alternate_queries?: string[] }[] };
+    tool_calls?: { tool: string; step_id?: string; backend?: string; latency_ms?: number; status?: string;
+        input_summary?: string; result_count?: number; error?: string | null }[];
+    extra?: { warnings?: string[]; route_method?: string; backend?: string;
+        citations?: { marker: string; evidence_id: string; resolved: boolean }[]; usage?: Record<string, unknown> };
+}
+
+export const traceService = {
+    async list(limit = 50): Promise<TraceSummary[]> {
+        return (await api.get('/traces', { params: { limit } })).data.traces;
+    },
+    async get(id: string): Promise<TraceDetail> {
+        return (await api.get(`/traces/${id}`)).data;
+    },
+};

@@ -12,12 +12,20 @@ router = APIRouter()
 
 @router.get("")
 async def traces(user: CurrentUser, limit: int = 50, session_id: Optional[str] = None):
-    return {"traces": await list_traces(limit=limit, session_id=session_id)}
+    """Your own questions; admins see the whole workspace (audit)."""
+    owner = None if _is_admin(user) else str(user.user_id)
+    return {"traces": await list_traces(limit=limit, session_id=session_id, user_id=owner)}
+
+
+def _is_admin(user) -> bool:
+    return getattr(user, "role", "user") == "admin"
 
 
 @router.get("/{trace_id}")
 async def trace(trace_id: str, user: CurrentUser):
     data = await get_trace(trace_id)
+    if data is not None and not _is_admin(user) and str(data.get("user_id")) != str(user.user_id):
+        data = None                      # don't reveal that someone else's trace exists
     if data is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Trace not found")
     return data

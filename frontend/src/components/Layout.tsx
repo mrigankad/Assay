@@ -17,7 +17,11 @@ function AssayMark({ className = 'h-[26px] w-[26px]' }: { className?: string }) 
 const NAV = [
     { to: '/', icon: 'ask', label: 'Ask', end: true },
     { to: '/documents', icon: 'document', label: 'Documents' },
+    { to: '/matrix', icon: 'table', label: 'Matrix' },
+    { to: '/evals', icon: 'evals', label: 'Evals' },
     { to: '/models', icon: 'models', label: 'Models' },
+    { to: '/audit', icon: 'audit', label: 'Audit log' },
+    { to: '/settings', icon: 'settings', label: 'Settings' },
 ];
 
 export function Layout() {

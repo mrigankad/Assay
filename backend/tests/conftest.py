@@ -1,4 +1,6 @@
 import os
+import tempfile as _tf
+os.environ["ASSAY_PREFS_PATH"] = os.path.join(_tf.mkdtemp(prefix="assay-test-"), "model_prefs.json")  # never read the real workspace prefs
 os.environ.setdefault("ALLOW_SIGNUP", "true")  # tests register many users; production default is closed
 os.environ.setdefault("ASSAY_SCAN_LOCAL", "0")
 os.environ.setdefault("DEFAULT_ADMIN_PASSWORD", "admin123")  # test fixture only

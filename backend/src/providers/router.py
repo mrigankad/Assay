@@ -100,7 +100,8 @@ def save_prefs(prefs: dict) -> dict:
     import json
     os.makedirs(os.path.dirname(PREFS_PATH), exist_ok=True)
     clean = {"default": prefs.get("default") or None,
-             "roles": {k: v for k, v in (prefs.get("roles") or {}).items() if k in ROLES and v}}
+             "roles": {k: v for k, v in (prefs.get("roles") or {}).items() if k in ROLES and v},
+             "blocked": sorted({b for b in (prefs.get("blocked") or []) if b in BY_ID})}
     with open(PREFS_PATH, "w", encoding="utf-8") as fh:
         json.dump(clean, fh, indent=2)
     return clean
@@ -123,10 +124,28 @@ def _env_model(role: str) -> Optional[str]:
     return os.getenv("ASSAY_MODEL")
 
 
+def blocked_providers() -> set[str]:
+    """Providers the workspace never sends document text to (Settings > Privacy)."""
+    env = {b.strip() for b in os.getenv("ASSAY_BLOCK_PROVIDERS", "").split(",") if b.strip()}
+    return env | set(load_prefs().get("blocked") or [])
+
+
+def _provider_of(model: str) -> Optional[str]:
+    prefix = model.split("/", 1)[0]
+    for spec in BY_ID.values():
+        if spec.id == prefix or spec.prefix == prefix:
+            return spec.id
+    return None
+
+
 async def resolve(role: str) -> tuple[str, Optional[str]]:
     """Return (model, api_base) for a role."""
+    blocked = blocked_providers()
     explicit = _env_model(role)
-    found = await detected()
+    if explicit and _provider_of(explicit) in blocked:
+        logger.warning("configured model is blocked; falling back to auto", role=role, model=explicit)
+        explicit = None
+    found = [d for d in await detected() if d.id not in blocked]
     by_id = {d.id: d for d in found}
     if explicit:
         pid = next((d.id for d in found if BY_ID[d.id].prefix and explicit.startswith(BY_ID[d.id].prefix + "/")), None)

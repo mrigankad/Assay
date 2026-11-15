@@ -116,11 +116,24 @@ async def test_anonymous_chat_toggle(client, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_evaluation_endpoints(client, auth_headers, tmp_path):
+async def test_evaluation_endpoints(client, auth_headers, tmp_path, monkeypatch):
+    from src.api.v1 import evaluation_routes as ev
+    monkeypatch.setattr(ev, "DATASET_DIR", tmp_path / "datasets")
+    monkeypatch.setattr(ev, "RUNS_DIR", tmp_path / "runs")
+    (tmp_path / "datasets").mkdir()
     await _upload(client, auth_headers)
     assert (await client.get("/evaluations/not-a-uuid")).status_code == 404
-    ds = tmp_path / "ds.json"
-    ds.write_text(json.dumps([{"question": "hotel limit tier 1 city", "relevant": ["policy.md"], "expected_substrings": ["220"]}]))
-    r = await client.post("/evaluations/run", headers=auth_headers, json={"dataset_path": str(ds), "top_k": 3})
-    assert r.status_code == 200 and r.json()["hit_rate"] == 1.0
-    assert (await client.post("/evaluations/run", headers=auth_headers, json={"dataset_path": "nope.json"})).status_code == 404
+    (tmp_path / "datasets" / "ds.json").write_text(json.dumps([{"question": "hotel limit tier 1 city", "relevant": ["policy.md"], "expected_substrings": ["220"]}]))
+    assert (await client.get("/evaluations/datasets", headers=auth_headers)).json()["datasets"] == [{"name": "ds", "questions": 1}]
+    r = await client.post("/evaluations/run", headers=auth_headers, json={"dataset": "ds", "top_k": 3})
+    assert r.status_code == 200, r.text
+    assert r.json()["hit_rate"] == 1.0
+    runs = (await client.get("/evaluations/runs", headers=auth_headers)).json()["runs"]
+    assert len(runs) == 1 and runs[0]["dataset"] == "ds" and "results" not in runs[0]
+    assert (await client.post("/evaluations/run", headers=auth_headers, json={"dataset": "nope"})).status_code == 404
+    # no path tricks
+    assert (await client.post("/evaluations/run", headers=auth_headers, json={"dataset": "../../backend/main"})).status_code == 400
+    # running costs tokens: admins only
+    r = await client.post("/auth/register", json={"username": "evaluser", "email": "evaluser@example.com", "password": "secret12"})
+    user = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    assert (await client.post("/evaluations/run", headers=user, json={"dataset": "ds"})).status_code == 403
