@@ -71,7 +71,7 @@ Full stack with Postgres, Redis, Qdrant and a worker: `cp .env.example .env && m
 
 ## Status
 
-Assay grew out of [Dexter](https://github.com/mrigankad/Dexter-retrival-engine) and the Bodham rebuild of it. Working today: everything in the table above, and the provider layer across all 73 providers (detection is unit-tested; live calls are tested where keys were available). In progress: page-region (bounding-box) citations in the UI, the claim-by-claim verifier view, the browser agent, the eval dashboard and model comparison.
+Assay grew out of [Dexter](https://github.com/mrigankad/Dexter-retrival-engine) and the Bodham rebuild of it. Working today: everything in the table above, and the provider layer across all 73 providers (detection is unit-tested; live calls verified through the Claude Code CLI login and Ollama Cloud). In progress: page-region (bounding-box) citations in the UI, the claim-by-claim verifier view, the browser agent, the eval dashboard and model comparison.
 
 ## Licence
 
