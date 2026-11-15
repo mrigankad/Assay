@@ -65,6 +65,10 @@ Full stack with Postgres, Redis, Qdrant and a worker: `cp .env.example .env && m
 
 **Cited on the page.** Click a citation and the real PDF page opens with the quoted lines boxed. Works for documents indexed before the feature existed.
 
+**Claim by claim.** Under each answer, every sentence is checked against the passages it cites: figures must appear in the source and the wording must mostly match. Sentences that are inference, cite the wrong passage, or state a figure with no citation are flagged. No extra model call.
+
+<p align="center"><img src="docs/readme/ui-claims.png" alt="Claim check: 6 of 10 claims backed, each with its status and citation" width="70%"/></p>
+
 **Matrix.** Ask the same questions of every document. Each cell shows the answer, the page, and whether the model's quote was found in the source.
 
 <p align="center"><img src="docs/readme/ui-matrix.png" alt="Matrix: three documents by three questions, with pages and not-found cells" width="100%"/></p>
