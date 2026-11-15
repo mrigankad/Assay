@@ -38,7 +38,7 @@ function Detail({ t }: { t: TraceDetail }) {
         <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex max-w-[720px] flex-col gap-2">
-                    <span className="text-[13px] text-body">Run {t.trace_id} · {when(t.created_at)}</span>
+                    <span className="break-all text-[13px] text-body">Run {t.trace_id} · {when(t.created_at)}</span>
                     <h2 className="font-display text-[28px] font-bold leading-8 tracking-[-0.02em]">{t.query}</h2>
                 </div>
                 <button onClick={download} className="flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DBD0] px-3.5 text-sm font-medium">
@@ -53,7 +53,7 @@ function Detail({ t }: { t: TraceDetail }) {
                 <Tile label="Citations resolved" value={cites.length ? `${resolved} / ${cites.length}` : '-'} accent={!!cites.length && resolved === cites.length} />
             </div>
 
-            <div className="flex flex-col text-[13px]">
+            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"><div className="flex min-w-[640px] flex-col text-[13px]">
                 <div className="flex items-center border-b border-ink pb-2.5 text-xs font-semibold text-body">
                     <span className="w-[230px] shrink-0">Step</span>
                     <span className="w-[120px] shrink-0">Where</span>
@@ -89,7 +89,7 @@ function Detail({ t }: { t: TraceDetail }) {
                     </span>
                     <span className="w-[70px] shrink-0 text-right text-body">{t.evidence_count ?? 0} used</span>
                 </div>
-            </div>
+            </div></div>
 
             <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
                 <div className="flex flex-col gap-2.5 rounded-[14px] border border-rule p-[18px] text-[13px] leading-5">
@@ -121,6 +121,7 @@ export function AuditPage() {
     const [list, setList] = useState<TraceSummary[] | null>(null);
     const [sel, setSel] = useState<TraceDetail | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [showDetail, setShowDetail] = useState(false);   // phones: list or detail, one at a time
 
     useEffect(() => {
         traceService.list().then((l) => {
@@ -131,7 +132,7 @@ export function AuditPage() {
 
     return (
         <div className="flex h-full bg-paper">
-            <aside className="flex w-[300px] shrink-0 flex-col border-r border-rule">
+            <aside className={clsx('w-full shrink-0 flex-col border-rule lg:flex lg:w-[300px] lg:border-r', showDetail ? 'hidden' : 'flex')}>
                 <div className="px-5 pb-3 pt-9">
                     <span className="text-[13px] text-body">Workspace · Audit log</span>
                     <h1 className="font-display text-[28px] font-bold">Answers</h1>
@@ -140,7 +141,7 @@ export function AuditPage() {
                     {error && <p className="px-5 text-sm text-dropped">{error}</p>}
                     {list?.length === 0 && <p className="px-5 text-sm text-body">No questions asked yet.</p>}
                     {list?.map((t) => (
-                        <button key={t.trace_id} onClick={() => traceService.get(t.trace_id).then(setSel)}
+                        <button key={t.trace_id} onClick={() => { setShowDetail(true); traceService.get(t.trace_id).then(setSel); }}
                             className={clsx('flex w-full flex-col gap-1 border-b border-[#EEF1EA] px-5 py-3 text-left',
                                 sel?.trace_id === t.trace_id ? 'bg-[#F7FCE8]' : 'hover:bg-bench')}>
                             <span className="line-clamp-2 text-sm font-medium">{t.query}</span>
@@ -149,7 +150,11 @@ export function AuditPage() {
                     ))}
                 </div>
             </aside>
-            <div className="min-w-0 flex-1 overflow-y-auto px-6 py-9 lg:px-12">
+            <div className={clsx('min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:block lg:px-12 lg:py-9', showDetail ? 'block' : 'hidden')}>
+                <button onClick={() => setShowDetail(false)} className="mb-4 flex items-center gap-1.5 text-sm font-medium text-body lg:hidden">
+                    <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 3 5 8l5 5" /></svg>
+                    All answers
+                </button>
                 {sel ? <Detail t={sel} /> : (
                     <div className="flex h-full items-center justify-center text-sm text-body">
                         {list === null ? 'Loading…' : 'Pick an answer to see how it was made.'}

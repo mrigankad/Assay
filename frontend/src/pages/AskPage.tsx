@@ -279,6 +279,17 @@ export function AskPage() {
             <aside className={clsx('hidden w-[440px] shrink-0 border-l border-rule bg-[#EEF1EA] xl:block', !turns.length && 'xl:hidden')}>
                 <EvidencePane e={selEv} n={selected?.n ?? null} onClose={() => setSelected(null)} />
             </aside>
+
+            {/* Below desktop width the evidence opens as a sheet over the chat */}
+            {selected && (
+                <div className="fixed inset-0 z-50 xl:hidden" role="dialog" aria-modal="true" aria-label="Evidence">
+                    <div className="absolute inset-0 bg-ink/30" onClick={() => setSelected(null)} />
+                    <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[18px] bg-[#EEF1EA] shadow-2xl">
+                        <div className="sticky top-0 z-10 flex justify-center bg-[#EEF1EA] pt-2.5"><span className="h-1 w-10 rounded-full bg-[#C9D0C3]" /></div>
+                        <EvidencePane e={selEv} n={selected?.n ?? null} onClose={() => setSelected(null)} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
